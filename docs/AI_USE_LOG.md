@@ -154,3 +154,8 @@ deciding them is explicitly the team's call, not this script's).
 **Not yet decided:** open decisions 3, 4, 5, 6, 7 (see
 docs/DECISIONS.md). Decisions 2 and the is_outlier_delay addition are
 now resolved.
+
+**Addendum, 2026-11-17:** the human generated the MySQL Workbench EER
+diagram (Phase 3's human-only task) and supplied it as
+`docs/diagrams/eer_diagram.png`. Claude reviewed it column-by-column
+against the live schema before committing; it matches exactly.

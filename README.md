@@ -42,7 +42,7 @@ in `docs/BUILD_PLAN.md`, with the working rules in `CLAUDE.md`.
   data-quality problems with real counts, finds and documents a tenth
   (two OpenFlights reference rows with a mislabeled country field), and
   produces the real evidence open decisions 3, 4 and 5 need (wind
-  coverage, midnight handling, airport-to-station distance threshold) —
+  coverage, midnight handling, airport-to-station distance threshold),
   see `docs/profiling/summary.md`. Those three decisions are still
   **open**, pending the team's own review, per `docs/DECISIONS.md`. See
   `docs/walkthrough/phase2.md` for the full write-up, including three
@@ -63,10 +63,12 @@ in `docs/BUILD_PLAN.md`, with the working rules in `CLAUDE.md`.
   Star schema and ETL flow diagrams are in `docs/diagrams/` as Mermaid
   source (`.mmd`) plus rendered SVGs (`.svg`, rendered and reviewed by
   a human, since Claude Code could not auto-install a renderer itself;
-  see `docs/walkthrough/phase3.md`). **A human still needs to open
-  this schema in MySQL Workbench and generate the EER diagram**
-  (`docs/BUILD_PLAN.md` Phase 3) — that is explicitly not something
-  this tooling can do.
+  see `docs/walkthrough/phase3.md`). The MySQL Workbench EER diagram
+  (`docs/BUILD_PLAN.md` Phase 3's human-only task) is done too:
+  `docs/diagrams/eer_diagram.png`, reverse-engineered directly from the
+  live schema. Checked column-by-column against `sql/03_create_warehouse.sql`:
+  matches exactly, including the full `fact_flight` measure list and
+  every FK.
 
 `docs/AI_USE_LOG.md` records what AI generated versus what was reviewed,
 for all phases so far.

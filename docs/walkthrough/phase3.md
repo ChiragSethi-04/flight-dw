@@ -28,6 +28,13 @@
 - **`docs/schema_dump.sql`**: the real `SHOW CREATE TABLE` output for
   every table, captured after running the DDL, not copied from the
   source `.sql` files.
+- **`docs/diagrams/eer_diagram.png`**: the MySQL Workbench EER diagram,
+  reverse-engineered by the human running this session directly from
+  the live `flight_dw` schema, per `docs/BUILD_PLAN.md` Phase 3's
+  human-only task (Claude Code cannot operate the Workbench GUI).
+  Checked column-by-column against `sql/03_create_warehouse.sql`
+  before being accepted: matches exactly, including every FK and the
+  full `fact_flight` measure list.
 - This plan was built and approved in Claude Code's plan mode, per the
   brief's own guide's instruction to do so for Phases 3 and 4.
 
