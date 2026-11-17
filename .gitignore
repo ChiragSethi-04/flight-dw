@@ -1,0 +1,21 @@
+# Secrets
+.env
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.pytest_cache/
+
+# Raw data (large, never committed; see data/sample/ for small slices)
+data/raw/
+
+# Logs
+logs/*.log
+logs/validation_*.txt
+!logs/.gitkeep
+
+# OS
+.DS_Store
