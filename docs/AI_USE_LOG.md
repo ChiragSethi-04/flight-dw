@@ -68,3 +68,44 @@ evidence, so they are left open rather than guessed.
 **Not yet decided:** open decisions 2-7 remain open (see
 docs/DECISIONS.md). S4 is blocked pending a human checking the lookup
 URLs in a real browser.
+
+## 2026-11-17, Phase 2: Data quality profiling
+
+**What Claude generated:**
+- `sql/01_create_schemas.sql`, `sql/02_create_staging.sql`
+  (`stg_bts_flights` with the real 109-column header, `stg_airports`
+  with OpenFlights' 14 columns).
+- `etl/extract.py`: bulk-loads both via `LOAD DATA LOCAL INFILE`, one
+  UUID `load_id` per run, verifies loaded row count against each
+  source file's own line count.
+- `etl/profile.py`: null counts, duplicate business-key check,
+  referential check against `stg_airports`, confirms/refutes the
+  brief's nine expected problems with real counts against the staged
+  7,001,619-row `stg_bts_flights` table, plus a pandas-only
+  airport-to-nearest-station distance histogram and AWND coverage
+  check for open decisions 5 and 3.
+- `docs/profiling/summary.md` and supporting CSVs; updated
+  `docs/DECISIONS.md` (real evidence added for decisions 3/4/5, still
+  left OPEN) and `docs/walkthrough/phase2.md`.
+
+**What the human reviewed or changed:**
+- A `NOT IN`-based referential check stalled for 50+ minutes with
+  almost no CPU time used; killed it and rewrote it to group distinct
+  codes first, which runs in under a second.
+- A null-count step doing 109 separate full-table scans took about 18
+  minutes; rewrote it as one single-pass query, confirmed correct and
+  fast on re-run.
+- The distance histogram initially showed two ~6,100km outliers;
+  investigated rather than accepted, traced to two OpenFlights rows
+  with a mislabeled `country` field, confirmed zero real 2025 flights
+  reference either airport, and excluded them from the histogram with
+  the reason documented (written up as a new, tenth data-quality
+  problem, since the brief explicitly allows adding ones found beyond
+  its own list of nine).
+- Ran the actual acceptance checks (`etl.extract`, `etl.profile`,
+  `pytest`) and based every number in `docs/profiling/summary.md` on
+  their real output, per hard rule 3.
+
+**Not yet decided:** open decisions 2, 3, 4, 5, 6, 7 (see
+docs/DECISIONS.md: 3, 4 and 5 now have real evidence attached, but
+deciding them is explicitly the team's call, not this script's).

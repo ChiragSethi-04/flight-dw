@@ -12,7 +12,7 @@ in `docs/BUILD_PLAN.md`, with the working rules in `CLAUDE.md`.
 
 ## Status
 
-**Phases 0 and 1 are complete.**
+**Phases 0, 1 and 2 are complete.**
 
 - **Phase 0 (setup):** repository scaffold, Docker Compose MySQL
   service, environment configuration and documentation skeleton, with
@@ -34,13 +34,29 @@ in `docs/BUILD_PLAN.md`, with the working rules in `CLAUDE.md`.
   redirect-to-wrong-content, and a dropped connection that crashed an
   early run).
 
-`docs/AI_USE_LOG.md` records what AI generated versus what was reviewed,
-for both phases.
+- **Phase 2 (data quality profiling):** `sql/01_create_schemas.sql` and
+  `sql/02_create_staging.sql` create the staging tables; `etl/extract.py`
+  bulk-loads S1 and S3 into them (7,001,619 flight rows, 7,698 airport
+  rows, every month's row count verified against its source CSV);
+  `etl/profile.py` confirms or refutes all nine of the brief's expected
+  data-quality problems with real counts, finds and documents a tenth
+  (two OpenFlights reference rows with a mislabeled country field), and
+  produces the real evidence open decisions 3, 4 and 5 need (wind
+  coverage, midnight handling, airport-to-station distance threshold) —
+  see `docs/profiling/summary.md`. Those three decisions are still
+  **open**, pending the team's own review, per `docs/DECISIONS.md`. See
+  `docs/walkthrough/phase2.md` for the full write-up, including three
+  real performance bugs found and fixed (a stalled `NOT IN` query, an
+  18-minute null-count step cut to one pass, and the mislabeled-airport
+  discovery).
 
-Phases 2 through 8 (profiling, dimensional model, ETL build, validation,
-OLAP queries, findings, handoff) are tracked in `docs/BUILD_PLAN.md` and
-have not started. Several design choices stay open until the team or
-data profiling settles them; see `docs/DECISIONS.md`.
+`docs/AI_USE_LOG.md` records what AI generated versus what was reviewed,
+for all three phases.
+
+Phases 3 through 8 (dimensional model, ETL build, validation, OLAP
+queries, findings, handoff) are tracked in `docs/BUILD_PLAN.md` and have
+not started. Several design choices stay open until the team or data
+profiling settles them; see `docs/DECISIONS.md`.
 
 ## Repository structure
 
@@ -57,8 +73,13 @@ flight-dw/
     download_sources.py    downloads and verifies S1-S4 into data/raw/
     raw/                  full downloaded source files (gitignored)
     sample/               small committed slice for reviewers
-  etl/                    extraction, cleaning, loading and audit modules
-  sql/                    numbered, re-runnable SQL scripts (01 through 07)
+  etl/
+    db.py                  shared MySQL connection helper
+    extract.py             loads S1 and S3 into staging
+    profile.py             data quality profiling (Phase 2)
+  sql/
+    01_create_schemas.sql  the flight_dw schema
+    02_create_staging.sql  stg_bts_flights, stg_airports
   tests/                  pytest unit tests for transformation logic
   logs/                   per-run row counts, download and validation logs (gitignored)
   exports/                CSV and chart exports for the dashboard and report
@@ -67,6 +88,7 @@ flight-dw/
     BUILD_PLAN.md          phase-by-phase build plan
     DECISIONS.md           decisions log: resolved decisions, open decisions, blockers
     source_columns.md      verified real column lists for S1 and S3, vs. the brief
+    profiling/              null counts, duplicate/referential checks, distance histogram, summary.md
     AI_USE_LOG.md          record of AI use per phase
     walkthrough/           plain-language write-up of each phase, for the whole team
     diagrams/               star schema and ETL flow diagrams
@@ -121,6 +143,18 @@ changed size. It downloads about 400 MB for a full year of S1-S3. S4
 B1, for what to do about it. A reviewer who does not want to download
 the full year can use `data/sample/bts_on_time_2025_01_sample_5000rows.csv`
 instead.
+
+## Loading staging and profiling
+
+```bash
+python -m etl.extract            # loads S1 and S3 into stg_bts_flights / stg_airports
+python -m etl.profile            # writes docs/profiling/summary.md and supporting CSVs
+```
+
+`etl.extract` takes a couple of minutes for the full year (7,001,619
+rows). `etl.profile` takes under a minute. Both are idempotent: staging
+tables are dropped and recreated each run, and profiling always reads
+whatever is currently staged.
 
 ## Reproducing the full pipeline
 

@@ -22,7 +22,12 @@ REQUIRED_VARS = (
 )
 
 
-def get_engine() -> Engine:
+def get_engine(local_infile: bool = False) -> Engine:
+    """local_infile=True enables LOAD DATA LOCAL INFILE on the client side
+    for this connection. Off by default; only the bulk-load scripts in
+    etl/extract.py need it. The server side is enabled unconditionally in
+    docker-compose.yml.
+    """
     missing = [v for v in REQUIRED_VARS if not os.environ.get(v)]
     if missing:
         raise RuntimeError(
@@ -35,4 +40,5 @@ def get_engine() -> Engine:
     user = os.environ["MYSQL_USER"]
     password = os.environ["MYSQL_PASSWORD"]
     url = f"mysql+pymysql://{user}:{password}@{host}:{port}/{database}"
-    return create_engine(url, pool_pre_ping=True)
+    connect_args = {"local_infile": 1} if local_infile else {}
+    return create_engine(url, pool_pre_ping=True, connect_args=connect_args)

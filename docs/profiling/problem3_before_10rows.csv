@@ -1,0 +1,11 @@
+FlightDate,Reporting_Airline,Origin,Dest,ArrDelay,CarrierDelay,WeatherDelay,NASDelay,SecurityDelay,LateAircraftDelay
+2025-01-01,AA,JFK,LAX,-7.00,,,,,
+2025-01-02,AA,JFK,LAX,2.00,,,,,
+2025-01-03,AA,JFK,LAX,-17.00,,,,,
+2025-01-04,AA,JFK,LAX,-10.00,,,,,
+2025-01-05,AA,JFK,LAX,-7.00,,,,,
+2025-01-06,AA,JFK,LAX,-8.00,,,,,
+2025-01-07,AA,JFK,LAX,-40.00,,,,,
+2025-01-08,AA,JFK,LAX,-52.00,,,,,
+2025-01-09,AA,JFK,LAX,-46.00,,,,,
+2025-01-10,AA,JFK,LAX,-35.00,,,,,

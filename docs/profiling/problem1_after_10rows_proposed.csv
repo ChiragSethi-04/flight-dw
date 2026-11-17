@@ -1,0 +1,11 @@
+FlightDate,Reporting_Airline,Flight_Number_Reporting_Airline,Origin,Dest,DepTime,ArrTime,ArrDelay,CarrierDelay,Cancelled,CancellationCode,cancelled_flag_proposed
+2025-01-26,AA,3,JFK,LAX,,,,,1.00,A,1
+2025-01-05,AA,9,ABQ,DFW,,,,,1.00,B,1
+2025-01-09,AA,9,ABQ,DFW,,,,,1.00,B,1
+2025-01-09,AA,9,DFW,ABQ,,,,,1.00,B,1
+2025-01-19,AA,10,LAX,JFK,,,,,1.00,B,1
+2025-01-06,AA,43,DCA,LGA,,,,,1.00,B,1
+2025-01-09,AA,102,HNL,DFW,,,,,1.00,B,1
+2025-01-09,AA,115,DFW,HNL,,,,,1.00,B,1
+2025-01-19,AA,117,JFK,LAX,,,,,1.00,B,1
+2025-01-09,AA,124,HNL,DFW,,,,,1.00,A,1
