@@ -12,18 +12,35 @@ in `docs/BUILD_PLAN.md`, with the working rules in `CLAUDE.md`.
 
 ## Status
 
-**Phase 0 (setup) is complete.** The repository scaffold, Docker Compose
-MySQL service, environment configuration and documentation skeleton are
-in place and the database connectivity check passes. See
-`docs/walkthrough/phase0.md` for what was built and why, and
-`docs/AI_USE_LOG.md` for what AI generated versus what was reviewed.
+**Phases 0 and 1 are complete.**
 
-No flight or weather data has been downloaded or loaded yet. Phases 1
-through 8 (source acquisition, profiling, dimensional model, ETL build,
-validation, OLAP queries, findings, handoff) are tracked in
-`docs/BUILD_PLAN.md` and have not started. Several design choices stay
-open until the team or data profiling settles them; see
-`docs/DECISIONS.md`.
+- **Phase 0 (setup):** repository scaffold, Docker Compose MySQL
+  service, environment configuration and documentation skeleton, with
+  the database connectivity check passing. See
+  `docs/walkthrough/phase0.md`.
+- **Phase 1 (source acquisition):** `data/download_sources.py`
+  downloads and verifies all four sources. The full 2025 calendar year
+  of BTS flight data is downloaded (12 files, 392 MB, checksummed), as
+  are the NOAA station/inventory reference files and the OpenFlights
+  airport list. The data year (2025) was resolved with real evidence,
+  not guessed; see `docs/DECISIONS.md`, decision 1. The BTS lookup
+  tables (S4: carrier names, airport IDs, cancellation codes) are
+  **blocked**, not downloaded: the BTS lookup page redirects away from
+  the file for every endpoint tried. See `docs/DECISIONS.md`, item B1,
+  for what a human needs to check. Real column lists for S1 and S3 are
+  documented in `docs/source_columns.md`. See
+  `docs/walkthrough/phase1.md` for the full write-up, including two
+  real bugs found and fixed while building this (a silent
+  redirect-to-wrong-content, and a dropped connection that crashed an
+  early run).
+
+`docs/AI_USE_LOG.md` records what AI generated versus what was reviewed,
+for both phases.
+
+Phases 2 through 8 (profiling, dimensional model, ETL build, validation,
+OLAP queries, findings, handoff) are tracked in `docs/BUILD_PLAN.md` and
+have not started. Several design choices stay open until the team or
+data profiling settles them; see `docs/DECISIONS.md`.
 
 ## Repository structure
 
@@ -37,17 +54,19 @@ flight-dw/
   run_all.py               pipeline orchestrator, numbered steps added phase by phase
   Makefile                convenience wrappers around docker compose and run_all.py
   data/
-    raw/                  full downloaded source files (gitignored, Phase 1)
-    sample/               small committed slice for reviewers (Phase 1)
+    download_sources.py    downloads and verifies S1-S4 into data/raw/
+    raw/                  full downloaded source files (gitignored)
+    sample/               small committed slice for reviewers
   etl/                    extraction, cleaning, loading and audit modules
   sql/                    numbered, re-runnable SQL scripts (01 through 07)
   tests/                  pytest unit tests for transformation logic
-  logs/                   per-run row counts and validation output (gitignored)
+  logs/                   per-run row counts, download and validation logs (gitignored)
   exports/                CSV and chart exports for the dashboard and report
   docs/
     brief.pdf              the project brief
     BUILD_PLAN.md          phase-by-phase build plan
-    DECISIONS.md           decisions log, including the 7 open decisions
+    DECISIONS.md           decisions log: resolved decisions, open decisions, blockers
+    source_columns.md      verified real column lists for S1 and S3, vs. the brief
     AI_USE_LOG.md          record of AI use per phase
     walkthrough/           plain-language write-up of each phase, for the whole team
     diagrams/               star schema and ETL flow diagrams
@@ -88,6 +107,20 @@ is a common thing to already have running on 3306 (this was the case on
 the machine this was built on: a Homebrew MySQL 8.4 service, left
 untouched). If 3307 is also taken on your machine, change the host-side
 number in both `docker-compose.yml` and `.env` (`MYSQL_PORT`) to match.
+
+## Downloading the source data
+
+```bash
+python data/download_sources.py           # downloads S1-S4 for DATA_YEAR in .env
+python data/download_sources.py --year 2025 --only s1   # just one source, one year
+```
+
+This is resumable: re-running it only fetches what is missing or has
+changed size. It downloads about 400 MB for a full year of S1-S3. S4
+(BTS lookup tables) is currently blocked; see `docs/DECISIONS.md`, item
+B1, for what to do about it. A reviewer who does not want to download
+the full year can use `data/sample/bts_on_time_2025_01_sample_5000rows.csv`
+instead.
 
 ## Reproducing the full pipeline
 

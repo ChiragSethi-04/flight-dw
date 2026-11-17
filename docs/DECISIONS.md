@@ -13,11 +13,16 @@ settles them. Nothing here is guessed.
 | P2 | Git identity | All commits are made under Chirag Sethi's configured git identity. No AI co-author trailer is added to commits, by explicit instruction. | AI use is disclosed in docs/AI_USE_LOG.md instead, which is the mechanism the brief's own AI-use acknowledgement relies on. | 2026-11-17 |
 | P3 | GitHub repo visibility | Public. | Explicit choice by the team member setting up the repo. | 2026-11-17 |
 
+## Decided, with evidence
+
+| # | Topic | Decision | Evidence | Date |
+|---|---|---|---|---|
+| 1 | Data year | **2025.** | Checked the live BTS TranStats PREZIP endpoint directly (`curl -I`) on 2026-11-17. `On_Time_Reporting_Carrier_On_Time_Performance_1987_present_2025_12.zip` returns HTTP 200, `Content-Length: 30337431`, `Last-Modified: Fri, 20 Mar 2026`, confirming December 2025 (the last month of calendar year 2025) has been published and is a complete, final file, not a placeholder. 2026 is not a candidate: it is the current, in-progress calendar year as of this check (today is 2026-11-17), so it cannot be a "full calendar year" yet. This matches the brief's own instruction to recommend "the most recent full calendar year BTS has published in full" rather than defaulting to the 2024 fallback, since 2025 is more recent and is verified complete. Recorded in `.env` / `.env.example` as `DATA_YEAR=2025`. | 2026-11-17 |
+
 ## Open decisions from the brief (still OPEN, need the team or profiling evidence)
 
 | # | Topic | Brief's recommendation | Status |
 |---|---|---|---|
-| 1 | Data year | Most recent full calendar year BTS has published in full, fallback 2024 | OPEN. Needs verification of BTS's actual current release status before Phase 1. |
 | 2 | Destination weather (`dest_weather_key` on `fact_flight`) | Brief recommends adding it, needs team agreement | OPEN. Needs team sign-off before Phase 3 DDL. |
 | 3 | Wind (AWND) coverage threshold | Decide after profiling | OPEN. Needs Phase 2 profiling evidence. |
 | 4 | Midnight (2400) handling detail | Decide after counting occurrences | OPEN. Needs Phase 2 profiling evidence. |
@@ -27,3 +32,12 @@ settles them. Nothing here is guessed.
 
 None of these are decided yet. Each gets a row added above with a date,
 reason and who decided it, once resolved.
+
+## Blockers needing human action
+
+| # | Topic | What was tried | What is needed |
+|---|---|---|---|
+| B1 | S4 BTS lookup tables (carrier names, airport IDs, cancellation codes) | On 2026-11-17, `data/download_sources.py` tried `https://www.transtats.bts.gov/Download_Lookup.asp?Lookup=L_UNIQUE_CARRIERS` (and `L_AIRPORT_ID`, `L_CANCELLATION`). Every attempt returns HTTP 302 to `Homepage.asp`, including with a session cookie carried from a prior request to the same page with no `Lookup=` parameter. A request with a realistic browser user agent and referer was not attempted automatically (the harness running this session blocks sending a spoofed browser identity as a matter of policy), so it is possible, but not confirmed, that the page still works for an actual human browsing it normally. | A human should open the three URLs above in a real browser, and if the file downloads there, save the three CSVs into `data/raw/bts_lookup/` using the filenames `L_UNIQUE_CARRIERS.csv`, `L_AIRPORT_ID.csv`, `L_CANCELLATION.csv`. If the browser also fails or shows the same redirect, say so and we will look for BTS's current documented path to these lookup tables rather than guessing at one. Per the brief's own instruction, no mirror or third-party copy should be substituted without asking first. |
+
+Per hard rule 2 (no row is silently dropped) this does not block S1-S3,
+which downloaded successfully and are not affected by this.
