@@ -12,7 +12,7 @@ in `docs/BUILD_PLAN.md`, with the working rules in `CLAUDE.md`.
 
 ## Status
 
-**Phases 0, 1 and 2 are complete.**
+**Phases 0 through 3 are complete.**
 
 - **Phase 0 (setup):** repository scaffold, Docker Compose MySQL
   service, environment configuration and documentation skeleton, with
@@ -49,14 +49,31 @@ in `docs/BUILD_PLAN.md`, with the working rules in `CLAUDE.md`.
   real performance bugs found and fixed (a stalled `NOT IN` query, an
   18-minute null-count step cut to one pass, and the mislabeled-airport
   discovery).
+- **Phase 3 (dimensional model and DDL):** `sql/03_create_warehouse.sql`
+  creates the full star schema (2 facts, 7 dimensions,
+  `airport_station_map`, `reject_flights`, `exception_log`,
+  `audit_log`), idempotent and verified to run cleanly twice, with every
+  dimension's `-1` Unknown row confirmed to exist. Built in Claude
+  Code's plan mode per the brief's own guide. `dest_weather_key` (open
+  decision 2) and a new `is_outlier_delay` column were added, both
+  confirmed with the user before any DDL was written; see
+  `docs/DECISIONS.md`. Full column-level documentation in
+  `docs/data_dictionary.md`/`.csv`, `docs/source_to_target_mapping.md`,
+  and the real `SHOW CREATE TABLE` output in `docs/schema_dump.sql`.
+  Star schema and ETL flow diagrams are in `docs/diagrams/` as Mermaid
+  source; not rendered to PNG in this environment, see
+  `docs/walkthrough/phase3.md` for why. **A human still needs to open
+  this schema in MySQL Workbench and generate the EER diagram**
+  (`docs/BUILD_PLAN.md` Phase 3) — that is explicitly not something
+  this tooling can do.
 
 `docs/AI_USE_LOG.md` records what AI generated versus what was reviewed,
-for all three phases.
+for all phases so far.
 
-Phases 3 through 8 (dimensional model, ETL build, validation, OLAP
-queries, findings, handoff) are tracked in `docs/BUILD_PLAN.md` and have
-not started. Several design choices stay open until the team or data
-profiling settles them; see `docs/DECISIONS.md`.
+Phases 4 through 8 (ETL build, validation, OLAP queries, findings,
+handoff) are tracked in `docs/BUILD_PLAN.md` and have not started.
+Several design choices stay open until the team or data profiling
+settles them; see `docs/DECISIONS.md`.
 
 ## Repository structure
 
@@ -78,23 +95,26 @@ flight-dw/
     extract.py             loads S1 and S3 into staging
     profile.py             data quality profiling (Phase 2)
   sql/
-    01_create_schemas.sql  the flight_dw schema
-    02_create_staging.sql  stg_bts_flights, stg_airports
+    01_create_schemas.sql    the flight_dw schema
+    02_create_staging.sql    stg_bts_flights, stg_airports
+    03_create_warehouse.sql  2 facts, 7 dimensions, airport_station_map, reject/exception/audit logs
   tests/                  pytest unit tests for transformation logic
   logs/                   per-run row counts, download and validation logs (gitignored)
   exports/                CSV and chart exports for the dashboard and report
   docs/
-    brief.pdf              the project brief
-    BUILD_PLAN.md          phase-by-phase build plan
-    DECISIONS.md           decisions log: resolved decisions, open decisions, blockers
-    source_columns.md      verified real column lists for S1 and S3, vs. the brief
-    profiling/              null counts, duplicate/referential checks, distance histogram, summary.md
-    AI_USE_LOG.md          record of AI use per phase
-    walkthrough/           plain-language write-up of each phase, for the whole team
-    diagrams/               star schema and ETL flow diagrams
-    profiling/              data quality profiling output
-    evidence/                validation check output
-    report/                  final report drafts
+    brief.pdf                the project brief
+    BUILD_PLAN.md            phase-by-phase build plan
+    DECISIONS.md             decisions log: resolved decisions, open decisions, blockers
+    source_columns.md        verified real column lists for S1 and S3, vs. the brief
+    data_dictionary.md/.csv  every warehouse column, generated from the live schema
+    source_to_target_mapping.md  every source field's path into the schema
+    schema_dump.sql          real SHOW CREATE TABLE output
+    AI_USE_LOG.md            record of AI use per phase
+    walkthrough/             plain-language write-up of each phase, for the whole team
+    diagrams/                star schema and ETL flow diagrams (Mermaid source)
+    profiling/               data quality profiling output (Phase 2)
+    evidence/                validation check output (Phase 5, not yet built)
+    report/                  final report drafts (Phase 7, not yet built)
 ```
 
 ## Setup
@@ -155,6 +175,20 @@ python -m etl.profile            # writes docs/profiling/summary.md and supporti
 rows). `etl.profile` takes under a minute. Both are idempotent: staging
 tables are dropped and recreated each run, and profiling always reads
 whatever is currently staged.
+
+## Building the warehouse schema
+
+```bash
+docker compose exec -T mysql mysql -uroot -p"$MYSQL_ROOT_PASSWORD" < sql/01_create_schemas.sql
+docker compose exec -T mysql mysql -uroot -p"$MYSQL_ROOT_PASSWORD" < sql/02_create_staging.sql
+docker compose exec -T mysql mysql -uroot -p"$MYSQL_ROOT_PASSWORD" < sql/03_create_warehouse.sql
+```
+
+Idempotent: safe to run against an empty database or one that already
+has this schema. Creates the two facts, seven dimensions (each with its
+`-1` Unknown row), `airport_station_map`, `reject_flights`,
+`exception_log` and `audit_log`. Does not populate any real rows beyond
+the Unknown members; that is Phase 4.
 
 ## Reproducing the full pipeline
 

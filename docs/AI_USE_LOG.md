@@ -109,3 +109,45 @@ URLs in a real browser.
 **Not yet decided:** open decisions 2, 3, 4, 5, 6, 7 (see
 docs/DECISIONS.md: 3, 4 and 5 now have real evidence attached, but
 deciding them is explicitly the team's call, not this script's).
+
+## 2026-11-17, Phase 3: Dimensional model and DDL
+
+**What Claude generated:**
+- A full implementation plan via Claude Code's plan mode (per the
+  brief's own guide's instruction to plan Phases 3 and 4 before
+  writing code), including two explicit AskUserQuestion checkpoints
+  for the only two decisions that actually change the schema shape
+  (dest_weather_key; is_outlier_delay).
+- `sql/03_create_warehouse.sql`: 2 facts, 7 dimensions,
+  `airport_station_map`, `reject_flights`, `exception_log`,
+  `audit_log`, each dimension's `-1` Unknown row.
+- `docs/data_dictionary.md`/`.csv` (115 columns, generated from the
+  live schema), `docs/source_to_target_mapping.md`,
+  `docs/diagrams/star_schema.mmd` and `etl_flow.mmd`,
+  `docs/schema_dump.sql` (real `SHOW CREATE TABLE` output),
+  `docs/walkthrough/phase3.md`.
+
+**What the human reviewed or changed:**
+- Approved the plan (open decisions 2 and the is_outlier_delay addition)
+  via AskUserQuestion before any DDL was written, per Claude Code's
+  plan-mode workflow.
+- Ran the real acceptance checks: applied the DDL twice to confirm
+  idempotency, queried every dimension directly for its `-1` row,
+  captured real `SHOW CREATE TABLE` output and spot-checked the FK and
+  unique-constraint definitions from it.
+- Attempted to render the Mermaid diagrams to PNG with
+  `npx -y @mermaid-js/mermaid-cli`; this session's own safety policy
+  blocked auto-installing and running that third-party package, so the
+  diagrams stay as Mermaid source with that limitation documented,
+  rather than silently skipped or worked around.
+- Accidentally re-ran `sql/02_create_staging.sql` while verifying
+  something unrelated, which truncated Phase 2's staged rows (staging
+  is deliberately truncate-and-reload); noted in
+  `docs/walkthrough/phase3.md` rather than hidden, and confirmed it
+  does not affect this phase (Phase 2's saved profiling evidence is
+  unaffected, and staging reloads in about 3 minutes whenever Phase 4
+  needs it).
+
+**Not yet decided:** open decisions 3, 4, 5, 6, 7 (see
+docs/DECISIONS.md). Decisions 2 and the is_outlier_delay addition are
+now resolved.

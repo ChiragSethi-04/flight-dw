@@ -1,0 +1,49 @@
+flowchart LR
+    subgraph sources ["Sources"]
+        S1["S1 BTS flights\n(12 monthly zips)"]
+        S2["S2 NOAA GHCN-Daily\n(stations, inventory;\nper-station daily later)"]
+        S3["S3 OpenFlights\nairports.dat"]
+        S4["S4 BTS lookups\n(BLOCKED, see\nDECISIONS.md B1)"]
+    end
+
+    subgraph staging ["Raw staging (etl/extract.py)"]
+        STG_BTS["stg_bts_flights\n(109 text columns +\nload_id, source_file,\nload_timestamp)"]
+        STG_AIR["stg_airports\n(14 text columns +\nmetadata)"]
+    end
+
+    subgraph clean ["Clean + conform (Phase 4, not yet built)"]
+        CLEAN["etl/clean.py, etl/conform.py\napply rules from brief section 4:\ncancelled-flight rule, 2400 mapping,\ncause-field rule, NOAA units,\nhaversine station match"]
+        REJECT["reject_flights\n(DUPLICATE, etc.)"]
+        EXC["exception_log\n(unmatched codes)"]
+    end
+
+    subgraph warehouse ["Warehouse (sql/03_create_warehouse.sql, built now)"]
+        DIMS["7 dimensions\n(+ -1 Unknown row each,\nalready created)"]
+        FACT_W["fact_airport_weather_daily"]
+        FACT_F["fact_flight"]
+    end
+
+    subgraph analytics ["Analytics layer (Phase 6, not yet built)"]
+        OLAP["sql/07_olap_queries.sql\nQ1-Q6, views, exports"]
+    end
+
+    S1 --> STG_BTS
+    S3 --> STG_AIR
+    S2 -.-> CLEAN
+    S4 -.blocked.-> CLEAN
+
+    STG_BTS --> CLEAN
+    STG_AIR --> CLEAN
+    CLEAN --> REJECT
+    CLEAN --> EXC
+    CLEAN --> DIMS
+    DIMS --> FACT_W
+    DIMS --> FACT_F
+    FACT_W -. "weather band\nfeeds flight fact" .-> FACT_F
+    FACT_F --> OLAP
+    FACT_W --> OLAP
+
+    classDef blocked fill:#fdd,stroke:#c00
+    class S4 blocked
+    classDef notyet fill:#eee,stroke:#999,stroke-dasharray: 5 5
+    class CLEAN,REJECT,EXC,OLAP notyet

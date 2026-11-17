@@ -1,0 +1,115 @@
+erDiagram
+    fact_flight {
+        bigint flight_key PK
+        int date_key FK
+        int dep_time_key FK
+        int origin_airport_key FK
+        int dest_airport_key FK
+        int carrier_key FK
+        int route_key FK
+        int flight_status_key FK
+        int origin_weather_key FK
+        int dest_weather_key FK
+        varchar flight_number
+        varchar tail_number
+        smallint scheduled_dep_time
+        smallint arr_delay_min
+        boolean on_time_flag
+        boolean is_outlier_delay
+    }
+
+    fact_airport_weather_daily {
+        int date_key PK_FK
+        int airport_key PK_FK
+        int weather_condition_key FK
+        decimal precip_mm
+        decimal avg_wind_ms
+        decimal tmax_c
+        decimal tmin_c
+        decimal station_distance_km
+    }
+
+    dim_date {
+        int date_key PK
+        date full_date
+        tinyint month_num
+        tinyint quarter
+        smallint year
+        boolean is_weekend
+        boolean is_us_holiday
+        varchar season
+    }
+
+    dim_time_of_day {
+        int time_key PK
+        tinyint hour_of_day
+        varchar departure_band
+    }
+
+    dim_airport {
+        int airport_key PK
+        char iata_code
+        varchar name
+        varchar city
+        char state
+        decimal latitude
+        decimal longitude
+        char nearest_station_id
+        varchar traffic_tier
+    }
+
+    dim_carrier {
+        int carrier_key PK
+        char carrier_code
+        varchar carrier_name
+        date effective_from
+        date effective_to
+        boolean is_current
+    }
+
+    dim_route {
+        int route_key PK
+        char origin_iata
+        char dest_iata
+        decimal distance_miles
+        varchar distance_band
+    }
+
+    dim_flight_status {
+        int flight_status_key PK
+        boolean cancelled_flag
+        char cancellation_reason_code
+        boolean diverted_flag
+        varchar delay_class
+    }
+
+    dim_weather_condition {
+        int weather_condition_key PK
+        varchar precip_band
+        varchar snow_band
+        varchar wind_band
+        varchar temp_band
+    }
+
+    airport_station_map {
+        int airport_key PK_FK
+        char station_id
+        decimal distance_km
+        boolean within_threshold
+    }
+
+    fact_flight }o--|| dim_date : "date_key"
+    fact_flight }o--|| dim_time_of_day : "dep_time_key"
+    fact_flight }o--|| dim_carrier : "carrier_key"
+    fact_flight }o--|| dim_route : "route_key"
+    fact_flight }o--|| dim_flight_status : "flight_status_key"
+    fact_flight }o--|| dim_airport : "origin_airport_key"
+    fact_flight }o--|| dim_airport : "dest_airport_key"
+    fact_flight }o--|| dim_weather_condition : "origin_weather_key"
+    fact_flight }o--|| dim_weather_condition : "dest_weather_key"
+
+    fact_airport_weather_daily }o--|| dim_date : "date_key"
+    fact_airport_weather_daily }o--|| dim_airport : "airport_key"
+    fact_airport_weather_daily }o--|| dim_weather_condition : "weather_condition_key"
+
+    airport_station_map }o--|| dim_airport : "airport_key"
