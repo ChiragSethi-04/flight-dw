@@ -15,14 +15,16 @@
 - **`docs/source_to_target_mapping.md`**: extends the brief's
   section-3 sample to every source field the schema actually uses.
 - **`docs/diagrams/star_schema.mmd`** and **`etl_flow.mmd`**: Mermaid
-  source for the star schema and the ETL flow. Not rendered to PNG:
-  this environment has `node`/`npx` but no local `mermaid-cli`
-  install, and fetching one on the fly (`npx -y @mermaid-js/mermaid-cli`)
-  was blocked by this session's own safety policy against
-  auto-installing and running third-party code. The brief's own
-  wording already anticipates this ("rendered to PNG if tools allow").
-  A human can render these with `npx @mermaid-js/mermaid-cli` locally,
-  or paste them into the Mermaid Live Editor.
+  source for the star schema and the ETL flow. Claude Code could not
+  render these to an image itself (see below), so the human running
+  this session rendered both independently (a Graphviz-based tool,
+  color-coded by fact/dimension/conformed-dimension/mapping-table) and
+  checked them back in as **`docs/diagrams/star_schema.svg`** and
+  **`etl_flow.svg`**. Both were reviewed column-by-column and
+  edge-by-edge against `sql/03_create_warehouse.sql` and the brief's
+  own section 5/6 diagrams before being accepted: every FK, every
+  cardinality marker, the five-stage load order, and the six
+  validation checks all match.
 - **`docs/schema_dump.sql`**: the real `SHOW CREATE TABLE` output for
   every table, captured after running the DDL, not copied from the
   source `.sql` files.
@@ -161,13 +163,13 @@ in the live table.
    migration later. Deciding the number now, before that analysis,
    would be exactly the kind of guessing hard rule 7 forbids.
 
-8. **Why was the star-schema diagram not rendered to PNG?**
-   Rendering it would have meant automatically downloading and running
-   a third-party npm package in this session, which this session's own
-   safety policy does not allow without explicit review. The Mermaid
-   source is complete and can be rendered by a human with the same
-   `npx @mermaid-js/mermaid-cli` command, or pasted into an online
-   Mermaid renderer.
+8. **Why didn't Claude Code render the diagrams itself?**
+   Doing so would have meant automatically downloading and running a
+   third-party npm package (`@mermaid-js/mermaid-cli`) inside this
+   session, which this session's own safety policy does not allow
+   without explicit human review. The Mermaid source was complete and
+   correct either way; a human rendered it independently with their own
+   tool and checked the result back in as `docs/diagrams/*.svg`.
 
 9. **If the team later decides open decision 5's threshold is, say,
    100km, does anything in this phase's DDL need to change?**

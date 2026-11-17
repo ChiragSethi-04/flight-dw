@@ -137,9 +137,12 @@ deciding them is explicitly the team's call, not this script's).
   unique-constraint definitions from it.
 - Attempted to render the Mermaid diagrams to PNG with
   `npx -y @mermaid-js/mermaid-cli`; this session's own safety policy
-  blocked auto-installing and running that third-party package, so the
-  diagrams stay as Mermaid source with that limitation documented,
-  rather than silently skipped or worked around.
+  blocked auto-installing and running that third-party package.
+  Rendered both independently with their own tool (Graphviz-based,
+  color-coded by fact/dimension/conformed-dimension/mapping-table) and
+  checked the SVGs back in; Claude reviewed both column-by-column and
+  edge-by-edge against `sql/03_create_warehouse.sql` before they were
+  committed.
 - Accidentally re-ran `sql/02_create_staging.sql` while verifying
   something unrelated, which truncated Phase 2's staged rows (staging
   is deliberately truncate-and-reload); noted in

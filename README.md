@@ -61,8 +61,9 @@ in `docs/BUILD_PLAN.md`, with the working rules in `CLAUDE.md`.
   `docs/data_dictionary.md`/`.csv`, `docs/source_to_target_mapping.md`,
   and the real `SHOW CREATE TABLE` output in `docs/schema_dump.sql`.
   Star schema and ETL flow diagrams are in `docs/diagrams/` as Mermaid
-  source; not rendered to PNG in this environment, see
-  `docs/walkthrough/phase3.md` for why. **A human still needs to open
+  source (`.mmd`) plus rendered SVGs (`.svg`, rendered and reviewed by
+  a human, since Claude Code could not auto-install a renderer itself;
+  see `docs/walkthrough/phase3.md`). **A human still needs to open
   this schema in MySQL Workbench and generate the EER diagram**
   (`docs/BUILD_PLAN.md` Phase 3) — that is explicitly not something
   this tooling can do.
@@ -111,7 +112,7 @@ flight-dw/
     schema_dump.sql          real SHOW CREATE TABLE output
     AI_USE_LOG.md            record of AI use per phase
     walkthrough/             plain-language write-up of each phase, for the whole team
-    diagrams/                star schema and ETL flow diagrams (Mermaid source)
+    diagrams/                star schema and ETL flow diagrams (.mmd source + rendered .svg)
     profiling/               data quality profiling output (Phase 2)
     evidence/                validation check output (Phase 5, not yet built)
     report/                  final report drafts (Phase 7, not yet built)
