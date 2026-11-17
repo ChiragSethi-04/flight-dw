@@ -1,9 +1,12 @@
-"""Basic per-stage row-count logging to audit_log and logs/, per hard
-rule: "every ETL stage writes row counts in and out to logs/ and to an
-audit_log table." This is the Phase 4 version (count in/out per stage);
-Phase 5 extends it with the six formal validation checks
-(sql/06_validation_checks.sql) on top of what is recorded here.
+"""Per-stage row-count logging to audit_log and logs/ (Phase 4), plus
+the six formal validation checks from brief section 6 (Phase 5):
+row reconciliation, orphan keys, uniqueness, cause totals, dimension
+counts, and the re-run test.
+
+Usage:
+    python -m etl.audit    # run all six checks, print and save evidence
 """
+import sys
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
@@ -11,8 +14,12 @@ from typing import Optional
 
 from sqlalchemy.engine import Engine
 
+from etl.db import get_engine
+
 ROOT_DIR = Path(__file__).resolve().parent.parent
 LOG_DIR = ROOT_DIR / "logs"
+SQL_DIR = ROOT_DIR / "sql"
+EVIDENCE_DIR = ROOT_DIR / "docs" / "evidence"
 
 
 def _insert_audit_row(
@@ -88,3 +95,58 @@ def stage(engine: Engine, load_id: str, stage_name: str, rows_in: Optional[int] 
             f"[{finished_at.isoformat(timespec='seconds')}] OK      {stage_name}: "
             f"rows_in={rows_in} rows_out={result.rows_out} ({duration:.1f}s)"
         )
+
+
+def run_validation_checks(engine: Engine) -> list:
+    """Runs every SELECT in sql/06_validation_checks.sql in order and
+    returns their real results as a list of (check_name, columns, rows).
+    Each statement's own output is the evidence; nothing here is
+    computed independently of what MySQL actually returns.
+    """
+    sql_text = (SQL_DIR / "06_validation_checks.sql").read_text()
+    kept_lines = [line.split("--", 1)[0] for line in sql_text.splitlines()]
+    statements = [s.strip() for s in "\n".join(kept_lines).split(";") if s.strip()]
+
+    results = []
+    with engine.connect() as conn:
+        for stmt in statements:
+            result = conn.exec_driver_sql(stmt)
+            if not result.returns_rows:
+                continue
+            columns = list(result.keys())
+            rows = result.fetchall()
+            check_name = rows[0][0] if rows else "unknown_check"
+            results.append((check_name, columns, rows))
+    return results
+
+
+def _format_results(results: list) -> str:
+    lines = [f"Validation run at {datetime.now(timezone.utc).isoformat(timespec='seconds')}", ""]
+    for check_name, columns, rows in results:
+        lines.append(f"== {check_name} ==")
+        lines.append("  ".join(columns))
+        for row in rows:
+            lines.append("  ".join(str(v) for v in row))
+        lines.append("")
+    return "\n".join(lines)
+
+
+def main() -> int:
+    engine = get_engine()
+    results = run_validation_checks(engine)
+    text = _format_results(results)
+    print(text)
+
+    LOG_DIR.mkdir(parents=True, exist_ok=True)
+    EVIDENCE_DIR.mkdir(parents=True, exist_ok=True)
+    ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    log_path = LOG_DIR / f"validation_{ts}.txt"
+    evidence_path = EVIDENCE_DIR / f"validation_{ts}.txt"
+    log_path.write_text(text)
+    evidence_path.write_text(text)
+    print(f"Saved to {log_path} and {evidence_path}")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

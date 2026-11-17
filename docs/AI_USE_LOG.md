@@ -196,3 +196,34 @@ against the live schema before committing; it matches exactly.
 **Not yet decided:** decision 7 (dashboard tool) remains open, pending
 the professor's confirmation. `dim_carrier.carrier_name` and
 `cancellation_reason_code` descriptions remain placeholders pending S4.
+
+## 2026-11-17, Phase 5: Validation
+
+**What Claude generated:**
+- `sql/06_validation_checks.sql`: the six checks from brief section 6,
+  each a standalone re-runnable query.
+- `etl/audit.py` extended with `run_validation_checks()`, saving real
+  output to `logs/validation_*.txt` and `docs/evidence/validation_*.txt`.
+- `etl/load_facts.py`'s `log_exceptions()`: found that `exception_log`
+  had been sitting at 0 rows since Phase 4 despite two known unmatched
+  airport codes, which was a real gap (the brief promises unmatched
+  codes get logged, not just resolved to the Unknown member), not
+  evidence that nothing was ever unmatched. Fixed.
+
+**What the human reviewed or changed:**
+- The first version of `log_exceptions()` used a `LEFT JOIN ... WHERE
+  IS NULL` directly against 7 million rows, the same performance
+  mistake already found and fixed in Phase 2 (the `NOT IN` stall) and
+  Phase 4 (the territory investigation). Caught again by watching it
+  not return in a reasonable time, and rewritten the same way: group
+  to distinct values first, compare small sets in Python.
+- Ran `python -m etl.audit` for real and checked the actual output
+  (all six checks pass; check 4's 14 mismatches out of 1,534,638
+  qualifying rows independently reproduces Phase 2's profiling
+  finding, computed by a different query against different, already-
+  loaded data) rather than assuming the checks would pass because the
+  underlying constraints exist.
+
+**Not yet decided:** decision 7 (dashboard tool) remains the only open
+item. The Workbench screenshots this phase's evidence list also asks
+for are explicitly human-only (`docs/BUILD_PLAN.md` Phase 5).

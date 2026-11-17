@@ -2,12 +2,63 @@
 first (fact_flight needs its weather band), then flights.
 """
 import sys
+import uuid
+from datetime import datetime, timezone
 
 import pandas as pd
 from sqlalchemy.engine import Engine
 
 from etl.conform import build_station_daily_weather
 from etl.db import get_engine
+
+# (natural_key_column, dim_table, dim_key_column, dim_natural_column, exception_type)
+UNMATCHED_CODE_CHECKS = [
+    ("Origin", "dim_airport", "airport_key", "iata_code", "UNKNOWN_AIRPORT_CODE"),
+    ("Dest", "dim_airport", "airport_key", "iata_code", "UNKNOWN_AIRPORT_CODE"),
+    ("Reporting_Airline", "dim_carrier", "carrier_key", "carrier_code", "UNKNOWN_CARRIER_CODE"),
+]
+
+
+def log_exceptions(engine: Engine, load_id: str) -> int:
+    """Brief section 4, problem 4: a code with no match gets the Unknown
+    member AND is written to an exception report, never just silently
+    resolved. One row per distinct unmatched code (not per flight row),
+    with the affected row count in the detail, since what matters here
+    is which codes are missing, not a repeat per occurrence.
+
+    Groups each column down to its few hundred distinct values first,
+    then compares that small set in Python, the same fix Phase 2's
+    stalled NOT IN query and Phase 4's territory investigation both
+    needed: a LEFT JOIN ... WHERE IS NULL directly against 7 million
+    rows is the anti-pattern to avoid here, not a hypothetical one.
+    """
+    total = 0
+    with engine.begin() as conn:
+        conn.exec_driver_sql("DELETE FROM exception_log WHERE load_id = %s", (load_id,))
+        for source_col, dim_table, dim_key, dim_col, exc_type in UNMATCHED_CODE_CHECKS:
+            code_counts = conn.exec_driver_sql(
+                f"SELECT {source_col}, COUNT(*) AS n FROM stg_bts_flights GROUP BY {source_col}"
+            ).fetchall()
+            known_codes = {
+                row[0] for row in conn.exec_driver_sql(f"SELECT {dim_col} FROM {dim_table} WHERE {dim_key} <> -1")
+            }
+            for code, n in code_counts:
+                if code in known_codes:
+                    continue
+                conn.exec_driver_sql(
+                    """
+                    INSERT INTO exception_log (load_id, source_table, natural_key, exception_type, detail, logged_at)
+                    VALUES (%s, %s, %s, %s, %s, %s)
+                    """,
+                    (
+                        load_id, "stg_bts_flights", code, exc_type,
+                        f"{n} flight row(s) reference this code; resolved to the Unknown member (-1)",
+                        datetime.now(timezone.utc),
+                    ),
+                )
+                total += 1
+    log(f"exception_log: {total} distinct unmatched code(s) logged")
+    return total
 
 
 def log(msg: str) -> None:
@@ -156,12 +207,14 @@ LEFT JOIN fact_airport_weather_daily dww
 """
 
 
-def load_fact_flight(engine: Engine) -> int:
+def load_fact_flight(engine: Engine, load_id: str = None) -> int:
+    load_id = load_id or str(uuid.uuid4())
     with engine.begin() as conn:
         conn.exec_driver_sql("DELETE FROM fact_flight")
         result = conn.exec_driver_sql(FACT_FLIGHT_INSERT_SQL)
         inserted = result.rowcount
     log(f"fact_flight: {inserted} rows")
+    log_exceptions(engine, load_id)
     return inserted
 
 

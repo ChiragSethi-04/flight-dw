@@ -105,7 +105,7 @@ def run_all(year: int) -> int:
     with stage(engine, load_id, "load_fact_airport_weather_daily") as s:
         s.rows_out = load_fact_airport_weather_daily(engine)
     with stage(engine, load_id, "load_fact_flight") as s:
-        s.rows_out = load_fact_flight(engine)
+        s.rows_out = load_fact_flight(engine, load_id)
 
     print(f"run_all finished, load_id={load_id}")
     return 0

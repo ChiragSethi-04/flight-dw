@@ -12,7 +12,7 @@ in `docs/BUILD_PLAN.md`, with the working rules in `CLAUDE.md`.
 
 ## Status
 
-**Phases 0 through 4 are complete.**
+**Phases 0 through 5 are complete.**
 
 - **Phase 0 (setup):** repository scaffold, Docker Compose MySQL
   service, environment configuration and documentation skeleton, with
@@ -93,12 +93,29 @@ in `docs/BUILD_PLAN.md`, with the working rules in `CLAUDE.md`.
   silently dropped eight real US territory airports (~92,000
   flight-row mentions), and a SQL comment-handling bug in the
   orchestrator's first real run.
+- **Phase 5 (validation):** `sql/06_validation_checks.sql` and
+  `etl/audit.py`'s `run_validation_checks()` run all six checks from
+  brief section 6 against the real warehouse. **All six pass**: row
+  reconciliation (7,001,619 = 7,001,619 + 0), zero orphan keys across
+  all nine foreign keys, zero duplicate business keys, cause totals
+  (14 mismatches out of 1,534,638 qualifying rows, exactly reproducing
+  Phase 2's profiling finding via an independent query against the
+  loaded fact table), dimension counts (`dim_carrier` exactly
+  complete; `dim_airport` exactly 2 unmatched codes), and the re-run
+  test (already proven in Phase 4: two full pipeline runs, identical
+  counts everywhere). Also found and fixed a real gap:
+  `exception_log` had been sitting at 0 rows since Phase 4 even though
+  two airport codes were known to be unmatched; the brief promises
+  unmatched codes get logged, not just resolved to the Unknown
+  member, so `etl/load_facts.py` gained `log_exceptions()`. See
+  `docs/walkthrough/phase5.md` and `docs/evidence/`. **Human-only**:
+  the actual Workbench screenshots for the report.
 
 `docs/AI_USE_LOG.md` records what AI generated versus what was reviewed,
 for all phases so far.
 
-Phases 5 through 8 (validation, OLAP queries, findings, handoff) are
-tracked in `docs/BUILD_PLAN.md` and have not started. Decision 7
+Phases 6 through 8 (OLAP queries, findings, handoff) are tracked in
+`docs/BUILD_PLAN.md` and have not started. Decision 7
 (dashboard tool) is the only one still open, pending the professor's
 confirmation; see `docs/DECISIONS.md`.
 
@@ -130,6 +147,7 @@ flight-dw/
     01_create_schemas.sql    the flight_dw schema
     02_create_staging.sql    stg_bts_flights, stg_airports, stg_noaa_daily
     03_create_warehouse.sql  2 facts, 7 dimensions, airport_station_map, reject/exception/audit logs
+    06_validation_checks.sql the six checks from brief section 6
   tests/                  pytest (42 tests): transformation functions, SCD2 lookup, scaffold
   logs/                   per-run row counts, download and validation logs (gitignored)
   exports/                CSV and chart exports for the dashboard and report
@@ -145,7 +163,7 @@ flight-dw/
     walkthrough/             plain-language write-up of each phase, for the whole team
     diagrams/                star schema and ETL flow diagrams (.mmd source + rendered .svg)
     profiling/               data quality profiling output (Phase 2)
-    evidence/                validation check output (Phase 5, not yet built)
+    evidence/                validation check output (Phase 5)
     report/                  final report drafts (Phase 7, not yet built)
 ```
 
@@ -242,6 +260,18 @@ tested against a clean clone before the final submission, per
 python run_all.py --status    # list every step without running them
 python run_all.py --check-db  # just verify the MySQL connection
 ```
+
+## Running the validation checks
+
+```bash
+python -m etl.audit
+```
+
+Runs all six checks from brief section 6 against whatever is currently
+loaded, prints the real results, and saves them to
+`logs/validation_<timestamp>.txt` (gitignored) and
+`docs/evidence/validation_<timestamp>.txt` (committed). Independent of
+`run_all.py`: re-run this alone any time without reloading anything.
 
 ## AI use disclosure
 

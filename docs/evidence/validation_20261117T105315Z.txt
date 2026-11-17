@@ -1,0 +1,34 @@
+Validation run at 2026-11-17T10:53:15+00:00
+
+== check1_row_reconciliation ==
+check_name  staged_rows  fact_rows  rejected_rows  fact_plus_rejected  result
+check1_row_reconciliation  7001619  7001619  0  7001619  PASS
+
+== check2_orphan_keys ==
+check_name  fk_column  orphan_count
+check2_orphan_keys  date_key  0
+check2_orphan_keys  dep_time_key  0
+check2_orphan_keys  origin_airport_key  0
+check2_orphan_keys  dest_airport_key  0
+check2_orphan_keys  carrier_key  0
+check2_orphan_keys  route_key  0
+check2_orphan_keys  flight_status_key  0
+check2_orphan_keys  origin_weather_key  0
+check2_orphan_keys  dest_weather_key  0
+
+== check3_uniqueness ==
+check_name  duplicate_business_key_groups
+check3_uniqueness  0
+
+== check4_cause_totals ==
+check_name  qualifying_rows  mismatch_count
+check4_cause_totals  1534638  14
+
+== check5_dimension_counts ==
+check_name  dim_table  distinct_source_codes  dim_rows  distinct_unmatched_codes
+check5_dimension_counts  dim_carrier  14  14  0
+check5_dimension_counts  dim_airport  352  1269  2
+
+== check6_rerun_snapshot ==
+check_name  dim_date_rows  dim_time_of_day_rows  dim_airport_rows  dim_carrier_rows  dim_route_rows  dim_flight_status_rows  dim_weather_condition_rows  airport_station_map_rows  fact_airport_weather_daily_rows  fact_flight_rows
+check6_rerun_snapshot  366  25  1270  15  6939  10  266  1269  334896  7001619
