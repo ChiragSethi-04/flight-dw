@@ -227,3 +227,51 @@ the professor's confirmation. `dim_carrier.carrier_name` and
 **Not yet decided:** decision 7 (dashboard tool) remains the only open
 item. The Workbench screenshots this phase's evidence list also asks
 for are explicitly human-only (`docs/BUILD_PLAN.md` Phase 5).
+
+**Addendum, 2026-11-17:** the human took the Workbench screenshots
+(table list, dimension/fact row counts, the orphan-key check, the row
+reconciliation check, the duplicate-key check) and supplied them,
+saved as `docs/evidence/screenshots/01` through `06`. Claude checked
+every number against the saved validation evidence from this phase;
+all match exactly.
+
+## 2026-11-18, Phase 6: OLAP and dashboard data
+
+**What Claude generated:**
+- `sql/07_olap_queries.sql`: Q1 through Q6 from brief section 8 (Q1 and
+  Q4 each split into two queries, since the brief names two different
+  grains for each), plus the 5 `CREATE OR REPLACE VIEW` statements
+  behind the 5 dashboard pages.
+- `etl/export_olap.py`: exports every query and view to `exports/*.csv`,
+  draws all 6 required chart types to `exports/charts/*.png` with a
+  real one-line interpretation per chart, runs the outlier/diverted
+  sensitivity check, and spot-checks 3 random numbers against
+  independently-written SQL.
+- `docs/dashboard_spec.md`: the 5-page build spec for Power BI/Tableau.
+
+**What the human reviewed or changed:**
+- Validated `sql/07_olap_queries.sql` against the real warehouse with
+  the raw `mysql` client first (8m40s for all 13 statements, no errors)
+  before building the Python export on top of it.
+- Caught a real sample-size artifact: Q5's first-drawn caption named a
+  100%-late-aircraft-share hour at LAS as the "peak," which checking
+  the underlying row showed was a single 2 a.m. flight (21 total
+  delay-cause minutes, versus 48,000+ for every other row). Fixed by
+  adding a minimum-volume floor before picking the headline cell in
+  `chart_q5_line()`; the real pattern (hour 20 at LAS, 62.8%) was
+  unmasked once the single-flight row was excluded from consideration.
+  The underlying data was never altered, only which number got quoted
+  in the interpretation line.
+- Investigated, rather than assumed a bug, when the sensitivity check
+  showed `avg_arr_delay_min` identical to 4 decimal places with and
+  without diverted flights included. Confirmed with a direct query
+  that all 19,258 diverted non-cancelled flights have `arr_delay_min
+  IS NULL`, which `AVG()` already ignores, explaining the identical
+  result exactly.
+- Ran the real export (`python -m etl.export_olap`) and checked the
+  actual printed output: all 3 spot-checks matched their independent
+  recomputation, per the brief's Phase 6 acceptance rule.
+
+**Not yet decided:** decision 7 (dashboard tool) remains the only open
+item; it blocks building the actual dashboard (human-only), not the
+views, CSVs or charts this phase produced.

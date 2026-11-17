@@ -1,0 +1,1 @@
+Precip=extreme/wind=moderate averages 38.7 min arrival delay, versus 4.4 min for precip=none/wind=strong.

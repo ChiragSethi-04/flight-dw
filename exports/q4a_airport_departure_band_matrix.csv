@@ -1,0 +1,101 @@
+airport,departure_band,flight_count,on_time_rate
+ATL,afternoon,91135,0.7468
+ATL,early morning,2111,0.8688
+ATL,evening,68311,0.6726
+ATL,morning,108127,0.8416
+ATL,night,44749,0.7058
+BOS,afternoon,38795,0.7075
+BOS,early morning,5106,0.9178
+BOS,evening,33579,0.6245
+BOS,morning,62799,0.8478
+BOS,night,2580,0.6385
+CLT,afternoon,56472,0.7349
+CLT,early morning,1083,0.9121
+CLT,evening,48841,0.6602
+CLT,morning,64156,0.8538
+CLT,night,24873,0.6917
+DCA,afternoon,41491,0.6893
+DCA,early morning,1082,0.9254
+DCA,evening,33936,0.6115
+DCA,morning,56673,0.8361
+DCA,night,9324,0.6042
+DEN,afternoon,84556,0.7443
+DEN,early morning,4765,0.887
+DEN,evening,89015,0.6331
+DEN,morning,118020,0.8263
+DEN,night,21330,0.6685
+DFW,afternoon,96578,0.6973
+DFW,early morning,3913,0.89
+DFW,evening,75019,0.6139
+DFW,morning,106963,0.8011
+DFW,night,33381,0.6559
+DTW,afternoon,38915,0.7597
+DTW,early morning,2277,0.8824
+DTW,evening,24542,0.7023
+DTW,morning,45860,0.8389
+DTW,night,10939,0.7597
+EWR,afternoon,34257,0.7279
+EWR,early morning,2463,0.8901
+EWR,evening,27595,0.6504
+EWR,morning,47865,0.8191
+EWR,night,8106,0.6509
+IAH,afternoon,35043,0.7511
+IAH,early morning,3245,0.9097
+IAH,evening,36761,0.6975
+IAH,morning,37186,0.8442
+IAH,night,5024,0.7756
+LAS,afternoon,50054,0.736
+LAS,early morning,6257,0.8941
+LAS,evening,33709,0.697
+LAS,morning,74680,0.863
+LAS,night,19103,0.7743
+LAX,afternoon,47257,0.7836
+LAX,early morning,5737,0.9142
+LAX,evening,34160,0.7911
+LAX,morning,79098,0.8531
+LAX,night,24220,0.8158
+LGA,afternoon,42103,0.6849
+LGA,early morning,701,0.9388
+LGA,evening,32765,0.6259
+LGA,morning,54806,0.8378
+LGA,night,5350,0.6394
+MCO,afternoon,42936,0.7128
+MCO,early morning,2781,0.9381
+MCO,evening,40607,0.621
+MCO,morning,65982,0.8672
+MCO,night,7742,0.6169
+MIA,afternoon,28749,0.6936
+MIA,early morning,1044,0.9017
+MIA,evening,32074,0.6583
+MIA,morning,33996,0.8603
+MIA,night,16044,0.699
+MSP,afternoon,32074,0.7669
+MSP,early morning,2096,0.9058
+MSP,evening,26030,0.7344
+MSP,morning,44769,0.8505
+MSP,night,7962,0.7558
+ORD,afternoon,95649,0.7138
+ORD,early morning,3226,0.875
+ORD,evening,84869,0.6562
+ORD,morning,125198,0.8078
+ORD,night,18086,0.6408
+PHX,afternoon,57671,0.7648
+PHX,early morning,5334,0.9303
+PHX,evening,40991,0.729
+PHX,morning,77915,0.8628
+PHX,night,14845,0.7778
+SEA,afternoon,39954,0.7546
+SEA,early morning,3470,0.8972
+SEA,evening,33143,0.7491
+SEA,morning,67694,0.8001
+SEA,night,20574,0.7581
+SFO,afternoon,39192,0.7504
+SFO,early morning,4643,0.9349
+SFO,evening,20404,0.7753
+SFO,morning,58911,0.8334
+SFO,night,21345,0.7908
+SLC,afternoon,30172,0.8169
+SLC,early morning,1715,0.9125
+SLC,evening,22990,0.7975
+SLC,morning,44919,0.8678
+SLC,night,16502,0.8523

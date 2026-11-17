@@ -1,0 +1,1 @@
+Late-aircraft delay peaks at hour 20 at LAS, 62.8% of that hour's delay-cause minutes, consistent with delay compounding later in the operating day.

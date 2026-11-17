@@ -1,0 +1,1 @@
+OO on BWI-ORD runs 102.4 min worse than that route's average, while OO on GUC-DFW runs 43.8 min better.

@@ -121,6 +121,33 @@ do. The queries and their real text output above are the evidence
 Claude Code can produce; the screenshots of your own screen running
 them are yours to take.
 
+**Addendum:** done. The human ran the equivalent queries directly in
+MySQL Workbench and supplied the screenshots, now saved in
+`docs/evidence/screenshots/`:
+
+- `01_show_tables.png`: all 16 tables (7 dimensions, 2 facts,
+  `airport_station_map`, `reject_flights`, `exception_log`,
+  `audit_log`, 3 staging tables).
+- `02_dimension_row_counts.png`: every dimension and fact table's row
+  count in one query, matching check 6's snapshot exactly (`dim_date`
+  366, `dim_time_of_day` 25, `dim_airport` 1270, `dim_carrier` 15,
+  `dim_route` 6939, `dim_flight_status` 10, `dim_weather_condition`
+  266, `airport_station_map` 1269, `fact_airport_weather_daily`
+  334896, `fact_flight` 7001619).
+- `03_orphan_check_origin_airport.png`: a direct probe for an
+  `origin_airport_key` orphan (0 rows returned).
+- `04_orphan_check_all_fks.png`: the full 12-row orphan check across
+  every FK on both fact tables, all 0, matching check 2.
+- `05_row_reconciliation.png`: `source_rows = loaded_rows = 7001619`,
+  `rejected_rows = 0`, matching check 1.
+- `06_duplicate_business_key_check.png`: 0 duplicate business-key
+  groups in `fact_flight`, matching check 3.
+
+Reviewed each screenshot's numbers against this phase's own saved
+evidence (`docs/evidence/validation_20261117T105315Z.txt`): every
+figure matches exactly, computed independently in Workbench rather
+than copied from the earlier Python run.
+
 ## Likely examiner questions
 
 1. **If checks 2 and 3 can never fail because of the database's own

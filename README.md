@@ -12,7 +12,7 @@ in `docs/BUILD_PLAN.md`, with the working rules in `CLAUDE.md`.
 
 ## Status
 
-**Phases 0 through 5 are complete.**
+**Phases 0 through 6 are complete.**
 
 - **Phase 0 (setup):** repository scaffold, Docker Compose MySQL
   service, environment configuration and documentation skeleton, with
@@ -108,13 +108,35 @@ in `docs/BUILD_PLAN.md`, with the working rules in `CLAUDE.md`.
   two airport codes were known to be unmatched; the brief promises
   unmatched codes get logged, not just resolved to the Unknown
   member, so `etl/load_facts.py` gained `log_exceptions()`. See
-  `docs/walkthrough/phase5.md` and `docs/evidence/`. **Human-only**:
-  the actual Workbench screenshots for the report.
+  `docs/walkthrough/phase5.md` and `docs/evidence/`. The Workbench
+  screenshots for the report (table list, row counts, orphan-key and
+  duplicate-key checks) are done too: `docs/evidence/screenshots/`,
+  checked against the saved validation evidence and matching exactly.
+
+- **Phase 6 (OLAP and dashboard data):** `sql/07_olap_queries.sql` runs
+  all six business questions from brief section 8 against the real
+  warehouse (8m40s for the full batch via the raw `mysql` client, no
+  errors), plus 5 `CREATE OR REPLACE VIEW` statements, one per
+  dashboard page. `etl/export_olap.py` exports every query and view to
+  `exports/*.csv`, draws all 6 required chart types to
+  `exports/charts/*.png` with a real one-line interpretation per
+  chart, runs the brief's outlier/diverted-flight sensitivity check
+  (excluding `is_outlier_delay` flights moves on-time rate from 77.5%
+  to 78.7% and average arrival delay from 8.50 to 3.28 minutes;
+  excluding diverted flights barely moves either, since diverted
+  flights' arrival delay is always NULL in the source data), and
+  spot-checks 3 random numbers against independent SQL (**all 3
+  matched**). `docs/dashboard_spec.md` is the 5-page build spec for
+  Power BI or Tableau. See `docs/walkthrough/phase6.md`, including a
+  real sample-size artifact found and fixed (a single overnight flight
+  briefly looked like a "100% late-aircraft delay" pattern until the
+  caption logic was given a minimum-volume floor). **Human-only**:
+  building the actual dashboard, blocked on decision 7.
 
 `docs/AI_USE_LOG.md` records what AI generated versus what was reviewed,
 for all phases so far.
 
-Phases 6 through 8 (OLAP queries, findings, handoff) are tracked in
+Phases 7 and 8 (findings/report, handoff) are tracked in
 `docs/BUILD_PLAN.md` and have not started. Decision 7
 (dashboard tool) is the only one still open, pending the professor's
 confirmation; see `docs/DECISIONS.md`.
@@ -143,14 +165,17 @@ flight-dw/
     load_facts.py           builds both facts (fact_flight as one set-based INSERT ... SELECT)
     audit.py                per-stage row-count logging to audit_log and logs/
     profile.py             data quality profiling (Phase 2)
+    export_olap.py          Phase 6: exports OLAP queries/views to CSV, draws charts, sensitivity + spot-checks
   sql/
     01_create_schemas.sql    the flight_dw schema
     02_create_staging.sql    stg_bts_flights, stg_airports, stg_noaa_daily
     03_create_warehouse.sql  2 facts, 7 dimensions, airport_station_map, reject/exception/audit logs
     06_validation_checks.sql the six checks from brief section 6
+    07_olap_queries.sql      the six business questions (brief section 8) + 5 dashboard views
   tests/                  pytest (42 tests): transformation functions, SCD2 lookup, scaffold
   logs/                   per-run row counts, download and validation logs (gitignored)
-  exports/                CSV and chart exports for the dashboard and report
+  exports/                CSV and chart exports for the dashboard and report (Phase 6)
+    charts/                 6 PNG charts + one-line interpretation .txt per chart
   docs/
     brief.pdf                the project brief
     BUILD_PLAN.md            phase-by-phase build plan
@@ -159,11 +184,12 @@ flight-dw/
     data_dictionary.md/.csv  every warehouse column, generated from the live schema
     source_to_target_mapping.md  every source field's path into the schema
     schema_dump.sql          real SHOW CREATE TABLE output
+    dashboard_spec.md        5-page BI dashboard build spec (Phase 6)
     AI_USE_LOG.md            record of AI use per phase
     walkthrough/             plain-language write-up of each phase, for the whole team
     diagrams/                star schema and ETL flow diagrams (.mmd source + rendered .svg)
     profiling/               data quality profiling output (Phase 2)
-    evidence/                validation check output (Phase 5)
+    evidence/                validation check output (Phase 5) + Workbench screenshots/
     report/                  final report drafts (Phase 7, not yet built)
 ```
 
@@ -272,6 +298,23 @@ loaded, prints the real results, and saves them to
 `logs/validation_<timestamp>.txt` (gitignored) and
 `docs/evidence/validation_<timestamp>.txt` (committed). Independent of
 `run_all.py`: re-run this alone any time without reloading anything.
+
+## Generating the OLAP exports and charts
+
+```bash
+python -m etl.export_olap
+```
+
+Runs all six business questions and the five dashboard views from
+`sql/07_olap_queries.sql` against whatever is currently loaded, saves
+every result to `exports/*.csv`, draws the six required chart types to
+`exports/charts/*.png` (each with a one-line interpretation saved
+alongside as `.txt`), runs the outlier/diverted-flight sensitivity
+check to `exports/sensitivity_check.csv`, and spot-checks three random
+numbers against independently-written SQL, printing MATCH/MISMATCH for
+each. Independent of `run_all.py` and `etl.audit`: re-run any time
+without reloading anything. See `docs/dashboard_spec.md` for how each
+export maps to a dashboard page.
 
 ## AI use disclosure
 

@@ -1,0 +1,5 @@
+condition,total_flights,cancellation_rate,on_time_rate,avg_arr_delay_min
+all_flights,7001619.0,0.0147,0.7748,8.5045
+excl_outliers,6891498.0,0.0149,0.7873,3.276
+excl_diverted,6982361.0,0.0147,0.7769,8.5045
+excl_outliers_and_diverted,6872240.0,0.015,0.7896,3.276
