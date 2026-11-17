@@ -1,0 +1,6 @@
+departure_band,flight_count,avg_arr_delay_min,late_aircraft_share,on_time_rate
+early morning,215288,-2.199,0.1602,0.9035
+morning,2742560,1.1782,0.2702,0.8499
+afternoon,2041291,11.5327,0.4054,0.7434
+evening,1554088,17.6324,0.4687,0.6801
+night,448392,13.4041,0.4549,0.7202

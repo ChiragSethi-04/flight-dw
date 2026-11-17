@@ -12,7 +12,7 @@ in `docs/BUILD_PLAN.md`, with the working rules in `CLAUDE.md`.
 
 ## Status
 
-**Phases 0 through 6 are complete.**
+**Phases 0 through 7 are complete.**
 
 - **Phase 0 (setup):** repository scaffold, Docker Compose MySQL
   service, environment configuration and documentation skeleton, with
@@ -133,13 +133,32 @@ in `docs/BUILD_PLAN.md`, with the working rules in `CLAUDE.md`.
   caption logic was given a minimum-volume floor). **Human-only**:
   building the actual dashboard, blocked on decision 7.
 
+- **Phase 7 (findings and report drafts):** `docs/report/` has all
+  eight Task sections (one per brief section 2-9), drawing only on
+  numbers already in `exports/` or `docs/evidence/`. The brief's four
+  hypotheses are tested for real in `etl/test_hypotheses.py`, saved to
+  `docs/evidence/hypothesis_testing.txt`: H1 (late aircraft is the
+  largest delay cause, 39.2%) is **confirmed**; H2 (delay builds
+  through the day) is **confirmed for the main operating day**, with
+  the overnight band breaking the simple monotonic story; H3 (snow and
+  heavy rain raise cancellations more than delay) and H4 (some routes
+  are late regardless of carrier) are each **partly supported**, true
+  for most of the data but with a real, checked exception in each
+  (heavy snow for H3; a real tail of high-carrier-spread routes for
+  H4). None of the four was forced to a clean answer. See
+  `docs/report/08_findings_and_limitations.md` for the full
+  evidence-interpretation-recommendation write-up of each, and
+  `docs/report/slide_outline.md` for the 12-minute presentation
+  outline and live-demo script.
+
 `docs/AI_USE_LOG.md` records what AI generated versus what was reviewed,
 for all phases so far.
 
-Phases 7 and 8 (findings/report, handoff) are tracked in
-`docs/BUILD_PLAN.md` and have not started. Decision 7
-(dashboard tool) is the only one still open, pending the professor's
-confirmation; see `docs/DECISIONS.md`.
+Phase 8 (handoff) is tracked in `docs/BUILD_PLAN.md` and is entirely
+human-only (professor confirmations, the actual dashboard build,
+individual contribution statements, peer evaluation, the live demo).
+Decision 7 (dashboard tool) is the only decision still open, pending
+the professor's confirmation; see `docs/DECISIONS.md`.
 
 ## Repository structure
 
@@ -166,6 +185,7 @@ flight-dw/
     audit.py                per-stage row-count logging to audit_log and logs/
     profile.py             data quality profiling (Phase 2)
     export_olap.py          Phase 6: exports OLAP queries/views to CSV, draws charts, sensitivity + spot-checks
+    test_hypotheses.py      Phase 7: tests the brief's 4 hypotheses against the real OLAP output
   sql/
     01_create_schemas.sql    the flight_dw schema
     02_create_staging.sql    stg_bts_flights, stg_airports, stg_noaa_daily
@@ -189,8 +209,8 @@ flight-dw/
     walkthrough/             plain-language write-up of each phase, for the whole team
     diagrams/                star schema and ETL flow diagrams (.mmd source + rendered .svg)
     profiling/               data quality profiling output (Phase 2)
-    evidence/                validation check output (Phase 5) + Workbench screenshots/
-    report/                  final report drafts (Phase 7, not yet built)
+    evidence/                validation check output (Phase 5) + Workbench screenshots/ + hypothesis testing (Phase 7)
+    report/                  Task 1-8 report sections and the slide outline (Phase 7)
 ```
 
 ## Setup
@@ -275,12 +295,18 @@ python run_all.py
 Runs every step end to end: the three SQL DDL scripts, S1/S3 staging,
 all 7 dimensions, the NOAA bulk weather download and filtered staging,
 and both facts, in the brief's locked order (dimensions before facts).
-Idempotent: safe to run more than once, and does. Real timing on this
-project's dev machine: about 14 minutes total, almost all of it
-`fact_flight`'s set-based load (~10 minutes) and the initial S1 staging
-(~2.5 minutes); everything else is under a minute combined. Will be
-tested against a clean clone before the final submission, per
-`docs/BUILD_PLAN.md` Phase 7.
+Idempotent: safe to run more than once, and does. Real timing, from
+three full runs on this project's dev machine: about 14 minutes the
+first two times, 20 minutes on a clean clone's freshly created
+database and container (`fact_flight`'s set-based load alone took
+14.3 minutes that time, against about 10 minutes the first two runs).
+Both numbers are real, not averaged or rounded to agree; the
+difference is most likely a cold container with no warmed-up InnoDB
+buffer pool, not a regression, but this was not isolated further
+since every run still finished with the exact same row counts either
+way. Tested against a clean clone of the pushed repository
+(`docs/walkthrough/phase7.md` has the full run), per `docs/BUILD_PLAN.md`
+Phase 7.
 
 ```bash
 python run_all.py --status    # list every step without running them
@@ -315,6 +341,34 @@ numbers against independently-written SQL, printing MATCH/MISMATCH for
 each. Independent of `run_all.py` and `etl.audit`: re-run any time
 without reloading anything. See `docs/dashboard_spec.md` for how each
 export maps to a dashboard page.
+
+## Testing the brief's hypotheses
+
+```bash
+python -m etl.test_hypotheses
+```
+
+Tests all four of brief section 9's hypotheses against the real
+`exports/` output from `etl.export_olap` (run that first if `exports/`
+is empty), prints the evidence for each, and saves it to
+`logs/hypothesis_testing.txt` (gitignored) and
+`docs/evidence/hypothesis_testing.txt` (committed). The findings
+themselves, written as evidence then interpretation then
+recommendation, are in `docs/report/08_findings_and_limitations.md`.
+
+## The report
+
+`docs/report/` has one markdown file per brief Task (1 to 8,
+corresponding to brief sections 2 to 9), plus `slide_outline.md` for
+the 12-minute presentation. Every number in every file traces to
+`exports/` or `docs/evidence/`; none is invented. To convert to Word
+or PDF with `pandoc` (not installed in this project's dev environment,
+so this command is a recipe, not something run and confirmed here):
+
+```bash
+cd docs/report
+pandoc 0*.md -o report.docx   # or report.pdf, if a LaTeX engine is installed
+```
 
 ## AI use disclosure
 

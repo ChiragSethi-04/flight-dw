@@ -1,0 +1,47 @@
+Hypothesis testing run at 2026-11-17T14:12:51+00:00
+
+## Hypothesis 1: late-aircraft delay is the largest cause
+  carrier_delay_min: 36,326,377 (32.5%)
+  weather_delay_min: 7,108,714 (6.4%)
+  nas_delay_min: 24,483,761 (21.9%)
+  security_delay_min: 152,802 (0.1%)
+  late_aircraft_delay_min: 43,862,971 (39.2%)
+  total delay-cause minutes: 111,934,625
+
+## Hypothesis 2: delay builds through the day (fleet-wide, exports/h2_delay_by_departure_band.csv)
+departure_band  flight_count  avg_arr_delay_min  late_aircraft_share  on_time_rate
+ early morning        215288            -2.1990               0.1602        0.9035
+       morning       2742560             1.1782               0.2702        0.8499
+     afternoon       2041291            11.5327               0.4054        0.7434
+       evening       1554088            17.6324               0.4687        0.6801
+         night        448392            13.4041               0.4549        0.7202
+
+## Hypothesis 3: snow/heavy rain raise cancellations more than delay minutes
+  weighted by precip_band (exports/h3_weighted_by_precip_band.csv):
+  precip_band  flight_count  cancellation_rate  avg_arr_delay_min
+      Unknown       1038469           0.015400           9.602200
+      extreme        200282           0.051254          27.406381
+        heavy        257447           0.037541          22.812583
+        light        667732           0.020071          13.684028
+     moderate        448020           0.027598          18.112283
+         none       4389669           0.009372           4.996496
+  weighted by snow_band (exports/h3_weighted_by_snow_band.csv):
+  snow_band  flight_count  cancellation_rate  avg_arr_delay_min
+    Unknown       1038469           0.015400           9.602200
+      heavy       1101871           0.010575           4.933678
+      light        118840           0.075834          34.962604
+   moderate          8090           0.293306          99.614378
+       none       4734349           0.013476           8.480536
+
+## Hypothesis 4: some routes are late regardless of carrier
+  multi-carrier routes: 3119
+  mean within-route std of carrier avg delay: 7.42 min
+  between-route std of route_avg_delay: 7.31 min
+  routes with within-route spread < 10 min: 2284 / 3119 (73.2%)
+  widest 5 within-route carrier spreads:
+  origin_iata  dest_iata
+  IAD          SJU          71.485879
+  MIA          XNA          54.348227
+  AUS          IAD          50.175661
+  EUG          LAS          48.367377
+  MSN          ORD          46.877491

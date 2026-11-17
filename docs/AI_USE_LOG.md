@@ -275,3 +275,43 @@ all match exactly.
 **Not yet decided:** decision 7 (dashboard tool) remains the only open
 item; it blocks building the actual dashboard (human-only), not the
 views, CSVs or charts this phase produced.
+
+## 2026-11-18, Phase 7: Findings and report drafts
+
+**What Claude generated:**
+- `docs/report/01` through `08`: one markdown section per brief Task
+  (1-8), drawing only on numbers already in `exports/`,
+  `docs/evidence/`, `docs/profiling/` or a schema artifact.
+- `etl/test_hypotheses.py`: tests the brief's four hypotheses against
+  the real OLAP output, saving evidence to
+  `docs/evidence/hypothesis_testing.txt`.
+- `docs/report/slide_outline.md`: 12-minute slide outline, speaker
+  notes, and a verbatim live-demo script.
+- Updated `README.md` with the Phase 7 status, a hypothesis-testing
+  usage section, and a report-conversion note.
+
+**What the human reviewed or changed:**
+- None of the four hypotheses was forced to a clean confirm or
+  reject: H1 is confirmed; H2 is confirmed for the main operating day
+  with the overnight hours named as a real exception; H3 and H4 are
+  each called "partly supported" with the specific part that does not
+  fit named directly (H3: heavy snow shows less disruption than no
+  snow at all, the opposite of what the hypothesis predicts; H4: a
+  real tail of routes shows one carrier performing very differently
+  from its peers on the identical route).
+- Ran a full clean-clone test of the README, the other Phase 7 task:
+  cloned the pushed repository fresh, copied over the already-
+  downloaded raw source files (not re-fetched, since Phase 1 already
+  tested the download logic twice), and ran every documented command
+  end to end against a brand-new database and container. Every real
+  number matched exactly (7,001,619 `fact_flight` rows, all 6
+  validation checks, all 6 OLAP charts and a fresh 3-number spot
+  check, all 42 tests). Found a real, checked discrepancy: the full
+  pipeline took 20 minutes on the fresh container against ~14 minutes
+  on the two earlier runs, most likely a cold InnoDB buffer pool;
+  `README.md` now states both real timings instead of only the
+  faster one, since hiding the slower number would not be honest about
+  what was actually measured.
+
+**Not yet decided:** decision 7 (dashboard tool) remains the only open
+item. Phase 8 (handoff) is entirely human-only.
