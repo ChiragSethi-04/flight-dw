@@ -242,6 +242,23 @@ def download_s2_noaa(force: bool) -> List[DownloadResult]:
     return results
 
 
+def download_s2_noaa_daily_by_year(year: int, force: bool) -> List[DownloadResult]:
+    """Phase 4: the actual per-station daily weather values, needed once
+    airport_station_map exists and the stations to keep are known.
+
+    Downloading all ~1,225 matched stations individually (one HTTP
+    request per station) would mean over a thousand separate requests.
+    NOAA also publishes one bulk file per year with every station's
+    every observation worldwide (by_year/<year>.csv.gz, about 158MB for
+    2025), which is filtered down to the stations actually needed after
+    downloading, in etl/extract.py. One download instead of 1,225.
+    """
+    log(f"== S2 NOAA GHCN-Daily, full year bulk file for {year} ==")
+    url = f"{NOAA_BASE_URL}by_year/{year}.csv.gz"
+    dest = RAW_DIR / "noaa" / f"by_year_{year}.csv.gz"
+    return [download(f"S2 by_year_{year}.csv.gz", url, dest, force)]
+
+
 def download_s3_openflights(force: bool) -> List[DownloadResult]:
     log("== S3 OpenFlights airports.dat ==")
     dest = RAW_DIR / "openflights" / "airports.dat"
@@ -293,7 +310,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     env_year = os.environ.get("DATA_YEAR")
     parser.add_argument("--year", type=int, default=int(env_year) if env_year else None)
-    parser.add_argument("--only", choices=["s1", "s2", "s3", "s4"], action="append")
+    parser.add_argument("--only", choices=["s1", "s2", "s3", "s4", "s2-daily"], action="append")
     parser.add_argument("--force", action="store_true")
     args = parser.parse_args()
 
@@ -305,6 +322,8 @@ def main() -> int:
         )
         return 2
 
+    # s2-daily is Phase 4 work (needs airport_station_map to exist first)
+    # and is deliberately not part of the default S1-S4 bundle.
     which = set(args.only) if args.only else {"s1", "s2", "s3", "s4"}
     all_results: List[DownloadResult] = []
 
@@ -316,6 +335,8 @@ def main() -> int:
         all_results += download_s3_openflights(args.force)
     if "s4" in which:
         all_results += download_s4_bts_lookups(args.force)
+    if "s2-daily" in which:
+        all_results += download_s2_noaa_daily_by_year(args.year, args.force)
 
     print_summary(all_results)
     log_path = write_log_file()

@@ -27,6 +27,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import List
 
+import pandas as pd
 from sqlalchemy.engine import Engine
 
 from etl.db import get_engine
@@ -65,7 +66,13 @@ def log(line: str) -> None:
 
 
 def run_sql_file(engine: Engine, path: Path) -> None:
-    kept_lines = [line for line in path.read_text().splitlines() if not line.strip().startswith("--")]
+    # Strips a trailing "-- comment" from each line, not just lines that
+    # are entirely a comment: sql/03_create_warehouse.sql has several
+    # inline comments after real SQL on the same line (e.g. "col TEXT, --
+    # note"), which a whole-line-only filter leaves in place, corrupting
+    # the statement. None of this project's SQL files use "--" inside a
+    # quoted string, so a plain split is safe here.
+    kept_lines = [line.split("--", 1)[0] for line in path.read_text().splitlines()]
     sql_text = "\n".join(kept_lines)
     statements = [s.strip() for s in sql_text.split(";") if s.strip()]
     with engine.begin() as conn:
@@ -174,6 +181,74 @@ def extract_s3_airports(engine: Engine, load_id: str) -> None:
     log(f"{status:<9} {dat_path.name}: dat data rows={source_rows}, loaded rows={loaded_rows}")
 
 
+NOAA_NEEDED_ELEMENTS = {"PRCP", "SNOW", "SNWD", "TMAX", "TMIN", "AWND"}
+NOAA_CHUNK_ROWS = 2_000_000
+
+
+def extract_s2_noaa_daily(engine: Engine, load_id: str, year: int) -> None:
+    """Filters NOAA's by_year bulk file down to the stations in
+    airport_station_map and the six elements this warehouse uses, then
+    stages the result. Requires airport_station_map to already be
+    populated (etl/load_dims.py's dim_airport/station-map step), which
+    is why this runs after that step, not alongside S1/S3.
+    """
+    log("== Loading S2 NOAA daily weather (filtered) into stg_noaa_daily ==")
+    gz_path = RAW_DIR / "noaa" / f"by_year_{year}.csv.gz"
+    if not gz_path.exists():
+        log(
+            f"{gz_path.name} not found in data/raw/noaa/. Run "
+            f"'python data/download_sources.py --only s2-daily --year {year}' first."
+        )
+        return
+
+    with engine.connect() as conn:
+        station_rows = conn.exec_driver_sql("SELECT DISTINCT station_id FROM airport_station_map").fetchall()
+    if not station_rows:
+        log("airport_station_map is empty. Run etl.load_dims's dim_airport/station-map step first.")
+        return
+    needed_stations = {s for (s,) in station_rows}
+    log(f"Filtering for {len(needed_stations)} stations and elements {sorted(NOAA_NEEDED_ELEMENTS)}")
+
+    source_rows = 0
+    kept_rows = 0
+    with tempfile.NamedTemporaryFile(
+        mode="w", suffix=".csv", delete=False, prefix="flight_dw_noaa_daily_"
+    ) as tmp:
+        tmp_path = Path(tmp.name)
+        reader = pd.read_csv(
+            gz_path,
+            header=None,
+            names=["station_id", "obs_date", "element", "raw_value", "m_flag", "q_flag", "s_flag", "obs_time"],
+            dtype=str,
+            chunksize=NOAA_CHUNK_ROWS,
+            compression="gzip",
+            keep_default_na=False,
+        )
+        for chunk in reader:
+            source_rows += len(chunk)
+            mask = chunk["station_id"].isin(needed_stations) & chunk["element"].isin(NOAA_NEEDED_ELEMENTS)
+            kept = chunk[mask]
+            kept_rows += len(kept)
+            kept.to_csv(tmp, header=False, index=False, mode="a")
+
+    loaded_rows = load_file_local_infile(
+        engine,
+        tmp_path,
+        table="stg_noaa_daily",
+        columns=["station_id", "obs_date", "element", "raw_value", "m_flag", "q_flag", "s_flag", "obs_time"],
+        load_id=load_id,
+        source_file=gz_path.name,
+        has_header=False,
+        trailing_phantom_field=False,
+    )
+    tmp_path.unlink(missing_ok=True)
+    status = "OK" if loaded_rows == kept_rows else "MISMATCH"
+    log(
+        f"{status:<9} {gz_path.name}: {source_rows} global rows scanned, "
+        f"{kept_rows} kept for our stations/elements, loaded rows={loaded_rows}"
+    )
+
+
 def write_log_file(load_id: str) -> Path:
     LOG_DIR.mkdir(parents=True, exist_ok=True)
     ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
@@ -184,15 +259,24 @@ def write_log_file(load_id: str) -> Path:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--only", choices=["s1", "s3"], action="append")
+    parser.add_argument("--only", choices=["s1", "s3", "s2-daily"], action="append")
+    env_year = __import__("os").environ.get("DATA_YEAR")
+    parser.add_argument("--year", type=int, default=int(env_year) if env_year else None)
+    parser.add_argument(
+        "--skip-schema",
+        action="store_true",
+        help="skip re-running sql/01 and sql/02 (avoids truncating stg_bts_flights/stg_airports "
+        "when only reloading stg_noaa_daily)",
+    )
     args = parser.parse_args()
     which = set(args.only) if args.only else {"s1", "s3"}
 
     engine = get_engine(local_infile=True)
 
-    log("Applying sql/01_create_schemas.sql and sql/02_create_staging.sql")
-    run_sql_file(engine, SQL_DIR / "01_create_schemas.sql")
-    run_sql_file(engine, SQL_DIR / "02_create_staging.sql")
+    if not args.skip_schema:
+        log("Applying sql/01_create_schemas.sql and sql/02_create_staging.sql")
+        run_sql_file(engine, SQL_DIR / "01_create_schemas.sql")
+        run_sql_file(engine, SQL_DIR / "02_create_staging.sql")
 
     load_id = str(uuid.uuid4())
     log(f"load_id for this run: {load_id}")
@@ -201,6 +285,11 @@ def main() -> int:
         extract_s1_bts(engine, load_id)
     if "s3" in which:
         extract_s3_airports(engine, load_id)
+    if "s2-daily" in which:
+        if args.year is None:
+            log("No data year given for s2-daily. Set DATA_YEAR in .env or pass --year.")
+        else:
+            extract_s2_noaa_daily(engine, load_id, args.year)
 
     log_path = write_log_file(load_id)
     log(f"Full log written to {log_path}")

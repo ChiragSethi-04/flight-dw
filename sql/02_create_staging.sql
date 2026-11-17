@@ -16,18 +16,19 @@
 -- etl/extract.py's LOAD DATA statement discards it rather than
 -- persisting a meaningless column.
 --
--- Scope note: only S1 (BTS flights) and S3 (OpenFlights airports) are
--- staged in Phase 2. S4 (BTS lookup tables) is blocked (see
+-- Scope note (Phase 2): S1 (BTS flights) and S3 (OpenFlights airports)
+-- were staged first. S4 (BTS lookup tables) is blocked (see
 -- docs/DECISIONS.md, item B1): its staging tables are not created until
 -- a real file exists to load, so their structure is not guessed.
--- stg_noaa_daily is not created yet either: the brief's own station
--- selection (nearest station per airport) happens in Phase 3, so which
--- stations to load per-day weather for is not known until then. Only
--- NOAA's small, already-downloaded station list and inventory are used
--- in this phase, directly from the raw text files via pandas, for the
--- distance histogram and AWND coverage check: they are reference data
--- read transiently, not fact data, so they are not staged as a table
--- (matching the brief's own staging table list in section 6/7, which
+-- stg_noaa_daily was added in Phase 4, once airport_station_map existed
+-- and the stations to keep were known (NOAA's by_year bulk file,
+-- data/download_sources.py --only s2-daily, filtered to the matched
+-- stations and the six elements this warehouse uses). Before that,
+-- only NOAA's small station list and inventory were used, directly
+-- from the raw text files via pandas (for the distance histogram and
+-- AWND coverage check): reference data read transiently, not fact
+-- data, so they are not staged as a table (matching the brief's own
+-- staging table list in section 6/7, which
 -- does not include them).
 
 USE flight_dw;
@@ -164,6 +165,26 @@ CREATE TABLE stg_airports (
     tz_database_name TEXT,
     airport_type TEXT,
     source TEXT,
+    load_id CHAR(36) NOT NULL,
+    source_file VARCHAR(255) NOT NULL,
+    load_timestamp DATETIME NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Columns per NOAA's documented GHCN-Daily "by_year" format, verified
+-- against the real downloaded file: id, date, element, value, m-flag,
+-- q-flag, s-flag, obs-time, no header row. Only rows for stations in
+-- airport_station_map and elements PRCP/SNOW/SNWD/TMAX/TMIN/AWND are
+-- kept; see etl/extract.py.
+DROP TABLE IF EXISTS stg_noaa_daily;
+CREATE TABLE stg_noaa_daily (
+    station_id TEXT,
+    obs_date TEXT,
+    element TEXT,
+    raw_value TEXT,
+    m_flag TEXT,
+    q_flag TEXT,
+    s_flag TEXT,
+    obs_time TEXT,
     load_id CHAR(36) NOT NULL,
     source_file VARCHAR(255) NOT NULL,
     load_timestamp DATETIME NOT NULL

@@ -8,7 +8,10 @@
 --
 -- Every dimension carries a -1 "Unknown" row, inserted here rather
 -- than in Phase 4's load scripts, because the Phase 3 acceptance check
--- requires it to exist as soon as the schema does.
+-- requires it to exist as soon as the schema does. The Unknown row's
+-- placeholder code is 'ZZZ', not 'UNK': 'UNK' is a real OpenFlights IATA
+-- code (Unalakleet Airport, Alaska), found when Phase 4's first load
+-- attempt hit a unique-key collision against it.
 --
 -- dim_date and dim_time_of_day are NOT populated with real calendar
 -- rows here. Generating those is Phase 4's job (etl/load_dims.py); this
@@ -99,7 +102,7 @@ INSERT INTO dim_airport (
     airport_key, iata_code, icao_code, name, city, state, country,
     latitude, longitude, tz_database_name, nearest_station_id, traffic_tier
 ) VALUES (
-    -1, 'UNK', NULL, 'Unknown', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL
+    -1, 'ZZZ', NULL, 'Unknown', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL
 );
 
 CREATE TABLE dim_carrier (
@@ -130,7 +133,7 @@ CREATE TABLE dim_route (
 INSERT INTO dim_route (
     route_key, origin_iata, dest_iata, distance_miles, distance_band
 ) VALUES (
-    -1, 'UNK', 'UNK', NULL, 'Unknown'
+    -1, 'ZZZ', 'ZZZ', NULL, 'Unknown'
 );
 
 CREATE TABLE dim_flight_status (

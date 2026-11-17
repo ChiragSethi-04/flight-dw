@@ -159,3 +159,40 @@ now resolved.
 diagram (Phase 3's human-only task) and supplied it as
 `docs/diagrams/eer_diagram.png`. Claude reviewed it column-by-column
 against the live schema before committing; it matches exactly.
+
+## 2026-11-17, Phase 4: ETL build
+
+**What Claude generated:**
+- `etl/clean.py` (transformation functions, 34 pytest cases covering
+  the brief's named edge cases), `etl/conform.py` (NOAA long-to-wide
+  pivot, SCD2 lookup), `etl/load_dims.py`, `etl/load_facts.py`
+  (`fact_flight` as one set-based `INSERT ... SELECT`), `etl/audit.py`,
+  a fully wired `run_all.py`, `data/download_sources.py`'s
+  `download_s2_noaa_daily_by_year`, `sql/02`'s `stg_noaa_daily`.
+- Resolved open decisions 3 (wind: NULL, no secondary lookup), 4
+  (2400 maps to 0, no date rollover) and 5 (75km threshold) via
+  AskUserQuestion before writing any code, using Phase 2's real
+  evidence. Decision 6 (SCD2) resolved by checking the real 2025 data
+  directly (no real carrier change) and demonstrating the lookup on a
+  synthetic, clearly labelled test case per the brief's own
+  instruction.
+
+**What the human reviewed or changed:**
+- Found and fixed four real bugs during this phase (full detail in
+  `docs/walkthrough/phase4.md`): a reserved placeholder (`'UNK'`)
+  colliding with a real IATA code; a real data anomaly colliding with
+  a dimension's reserved `-1` row and duplicating `fact_flight` rows;
+  a country-name filter silently dropping eight real US territory
+  airports (~92,000 flight-row mentions); and a SQL comment-stripping
+  bug plus a bootstrap-ordering bug in `run_all.py`'s first real run.
+  None of these were caught by writing the code carefully the first
+  time; all four were caught by running the real pipeline against the
+  real 7-million-row dataset and checking the actual output against
+  independently-known numbers (Phase 2's profiling results), not by
+  assuming the code was correct because it looked right.
+- Ran the full pipeline twice to confirm identical row counts
+  (idempotency, hard rule 4), and ran the full pytest suite (42 tests).
+
+**Not yet decided:** decision 7 (dashboard tool) remains open, pending
+the professor's confirmation. `dim_carrier.carrier_name` and
+`cancellation_reason_code` descriptions remain placeholders pending S4.

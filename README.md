@@ -12,7 +12,7 @@ in `docs/BUILD_PLAN.md`, with the working rules in `CLAUDE.md`.
 
 ## Status
 
-**Phases 0 through 3 are complete.**
+**Phases 0 through 4 are complete.**
 
 - **Phase 0 (setup):** repository scaffold, Docker Compose MySQL
   service, environment configuration and documentation skeleton, with
@@ -41,10 +41,10 @@ in `docs/BUILD_PLAN.md`, with the working rules in `CLAUDE.md`.
   `etl/profile.py` confirms or refutes all nine of the brief's expected
   data-quality problems with real counts, finds and documents a tenth
   (two OpenFlights reference rows with a mislabeled country field), and
-  produces the real evidence open decisions 3, 4 and 5 need (wind
+  produces the real evidence open decisions 3, 4 and 5 needed (wind
   coverage, midnight handling, airport-to-station distance threshold),
-  see `docs/profiling/summary.md`. Those three decisions are still
-  **open**, pending the team's own review, per `docs/DECISIONS.md`. See
+  see `docs/profiling/summary.md`. All three were resolved in Phase 4
+  using this evidence; see `docs/DECISIONS.md`. See
   `docs/walkthrough/phase2.md` for the full write-up, including three
   real performance bugs found and fixed (a stalled `NOT IN` query, an
   18-minute null-count step cut to one pass, and the mislabeled-airport
@@ -69,14 +69,38 @@ in `docs/BUILD_PLAN.md`, with the working rules in `CLAUDE.md`.
   live schema. Checked column-by-column against `sql/03_create_warehouse.sql`:
   matches exactly, including the full `fact_flight` measure list and
   every FK.
+- **Phase 4 (ETL build):** the full pipeline is real. `run_all.py`
+  downloads NOAA's full-year bulk weather file (filtered to the
+  ~1,225 matched stations), stages everything, and loads all 7
+  dimensions and both facts: **7,001,619 `fact_flight` rows** (an
+  exact match with `stg_bts_flights`, confirming no row was silently
+  dropped) and **334,896 `fact_airport_weather_daily` rows**. Open
+  decisions 3 (wind: NULL, no secondary lookup), 4 (2400 maps to 0,
+  no date rollover) and 5 (75km distance threshold) were resolved with
+  real Phase 2 evidence before any code was written; decision 6
+  (carrier SCD2) was resolved by checking the real data directly (no
+  real change in one year) and demonstrating the lookup on a
+  synthetic, clearly labelled test case per the brief's own
+  instruction. See `docs/DECISIONS.md`. Re-ran the full pipeline twice
+  to confirm identical counts (idempotent, hard rule 4). `etl/clean.py`'s
+  transformation functions have 34 dedicated pytest cases (42 total
+  across the project) covering the brief's named edge cases (2400,
+  0000, cancelled rows, -9999, non-summing causes). See
+  `docs/walkthrough/phase4.md` for the full write-up, including four
+  real bugs found and fixed: a reserved placeholder colliding with a
+  real IATA code, a real data anomaly colliding with a dimension's
+  reserved row and duplicating fact rows, a country filter that
+  silently dropped eight real US territory airports (~92,000
+  flight-row mentions), and a SQL comment-handling bug in the
+  orchestrator's first real run.
 
 `docs/AI_USE_LOG.md` records what AI generated versus what was reviewed,
 for all phases so far.
 
-Phases 4 through 8 (ETL build, validation, OLAP queries, findings,
-handoff) are tracked in `docs/BUILD_PLAN.md` and have not started.
-Several design choices stay open until the team or data profiling
-settles them; see `docs/DECISIONS.md`.
+Phases 5 through 8 (validation, OLAP queries, findings, handoff) are
+tracked in `docs/BUILD_PLAN.md` and have not started. Decision 7
+(dashboard tool) is the only one still open, pending the professor's
+confirmation; see `docs/DECISIONS.md`.
 
 ## Repository structure
 
@@ -87,21 +111,26 @@ flight-dw/
   docker-compose.yml      MySQL 8 service, local_infile enabled
   .env.example            environment variable template (.env is gitignored)
   requirements.txt        Python dependencies
-  run_all.py               pipeline orchestrator, numbered steps added phase by phase
+  run_all.py               full pipeline orchestrator, every step, in order
   Makefile                convenience wrappers around docker compose and run_all.py
   data/
-    download_sources.py    downloads and verifies S1-S4 into data/raw/
+    download_sources.py    downloads and verifies S1-S4, plus the S2 NOAA bulk weather file
     raw/                  full downloaded source files (gitignored)
     sample/               small committed slice for reviewers
   etl/
     db.py                  shared MySQL connection helper
-    extract.py             loads S1 and S3 into staging
+    extract.py             loads S1, S3 and (once airport_station_map exists) filtered S2 daily weather
+    clean.py               pure transformation functions (hhmm/2400, cause rules, NOAA units, bands)
+    conform.py             NOAA long-to-wide pivot; the SCD2 carrier lookup
+    load_dims.py            builds all 7 dimensions + airport_station_map
+    load_facts.py           builds both facts (fact_flight as one set-based INSERT ... SELECT)
+    audit.py                per-stage row-count logging to audit_log and logs/
     profile.py             data quality profiling (Phase 2)
   sql/
     01_create_schemas.sql    the flight_dw schema
-    02_create_staging.sql    stg_bts_flights, stg_airports
+    02_create_staging.sql    stg_bts_flights, stg_airports, stg_noaa_daily
     03_create_warehouse.sql  2 facts, 7 dimensions, airport_station_map, reject/exception/audit logs
-  tests/                  pytest unit tests for transformation logic
+  tests/                  pytest (42 tests): transformation functions, SCD2 lookup, scaffold
   logs/                   per-run row counts, download and validation logs (gitignored)
   exports/                CSV and chart exports for the dashboard and report
   docs/
@@ -195,17 +224,24 @@ the Unknown members; that is Phase 4.
 
 ## Reproducing the full pipeline
 
-Not yet available. Once Phase 4 is built, running the full pipeline will
-be:
-
 ```bash
 python run_all.py
 ```
 
-which executes every numbered step in order (dimensions before facts,
-per hard rule 5 in `CLAUDE.md`). This README will be updated with exact
-run order and timings once that phase is reviewed, and tested against a
-clean clone before the final submission, per `docs/BUILD_PLAN.md` Phase 7.
+Runs every step end to end: the three SQL DDL scripts, S1/S3 staging,
+all 7 dimensions, the NOAA bulk weather download and filtered staging,
+and both facts, in the brief's locked order (dimensions before facts).
+Idempotent: safe to run more than once, and does. Real timing on this
+project's dev machine: about 14 minutes total, almost all of it
+`fact_flight`'s set-based load (~10 minutes) and the initial S1 staging
+(~2.5 minutes); everything else is under a minute combined. Will be
+tested against a clean clone before the final submission, per
+`docs/BUILD_PLAN.md` Phase 7.
+
+```bash
+python run_all.py --status    # list every step without running them
+python run_all.py --check-db  # just verify the MySQL connection
+```
 
 ## AI use disclosure
 
